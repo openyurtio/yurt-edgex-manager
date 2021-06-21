@@ -1,0 +1,6 @@
+domain: openyurt.io
+layout:
+- go.kubebuilder.io/v3
+projectName: edgex
+repo: github.com/lwmqwer/EdgeX
+version: "3"
