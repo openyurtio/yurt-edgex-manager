@@ -1,0 +1,7 @@
+apiVersion: device.openyurt.io/v1alpha1
+kind: EdgeX
+metadata:
+  name: edgex-sample
+spec:
+  # Add fields here
+  foo: bar

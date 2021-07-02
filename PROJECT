@@ -3,4 +3,15 @@ layout:
 - go.kubebuilder.io/v3
 projectName: edgex
 repo: github.com/lwmqwer/EdgeX
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openyurt.io
+  group: device
+  kind: EdgeX
+  path: github.com/lwmqwer/EdgeX/api/v1alpha1
+  plural: edgexes
+  version: v1alpha1
 version: "3"
