@@ -17,25 +17,54 @@ limitations under the License.
 package v1alpha1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// DeploymentTemplateSpec defines the pool template of Deployment.
+type DeploymentTemplateSpec struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              appsv1.DeploymentSpec `json:"spec"`
+}
+
+// DeploymentTemplateSpec defines the pool template of Deployment.
+type ServiceTemplateSpec struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              appsv1.DeploymentSpec `json:"spec"`
+}
+
+type ComponetSpec struct {
+	// +optional
+	Deployment DeploymentTemplateSpec `json:"deploymentspec,omitempty"`
+
+	// +optional
+	Service ServiceTemplateSpec `json:"servicespec,omitempty"`
+}
 
 // EdgeXSpec defines the desired state of EdgeX
 type EdgeXSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Version string `json:"version,omitempty"`
 
-	// Foo is an example field of EdgeX. Edit edgex_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	PoolName string `json:"poolname,omitempty"`
+
+	AdditionalComponents []ComponetSpec `json:"additinalcomponets,omitempty"`
+}
+
+type ComponetStatus struct {
+	Deployment appsv1.DeploymentStatus `json:"deploymentstatus,omitempty"`
 }
 
 // EdgeXStatus defines the observed state of EdgeX
 type EdgeXStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Initialized bool `json:"initialized,omitempty"`
+
+	ComponetStatus []ComponetStatus `json:"componetsstatus,omitempty"`
+
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
 }
 
 //+kubebuilder:object:root=true
