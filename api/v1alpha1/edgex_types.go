@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +31,7 @@ type DeploymentTemplateSpec struct {
 // DeploymentTemplateSpec defines the pool template of Deployment.
 type ServiceTemplateSpec struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              appsv1.DeploymentSpec `json:"spec"`
+	Spec              corev1.ServiceSpec `json:"spec"`
 }
 
 type ComponetSpec struct {
