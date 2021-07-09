@@ -1,7 +1,7 @@
 apiVersion: device.openyurt.io/v1alpha1
 kind: EdgeX
 metadata:
-  name: edgex-sample
+  name: edgex-sample-beijing
 spec:
-  # Add fields here
-  foo: bar
+  version: hanoi
+  poolname: beijing

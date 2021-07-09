@@ -47,25 +47,35 @@ type EdgeXSpec struct {
 	Version string `json:"version,omitempty"`
 
 	PoolName string `json:"poolname,omitempty"`
-
+	// +optional
 	AdditionalComponents []ComponetSpec `json:"additinalcomponets,omitempty"`
 }
 
 type ComponetStatus struct {
+	Name string `json:"name,omitempty"`
+
 	Deployment appsv1.DeploymentStatus `json:"deploymentstatus,omitempty"`
 }
 
 // EdgeXStatus defines the observed state of EdgeX
 type EdgeXStatus struct {
+	// ObservedGeneration is the most recent generation observed for this UnitedDeployment. It corresponds to the
+	// UnitedDeployment's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
 	Initialized bool `json:"initialized,omitempty"`
 
-	ComponetStatus []ComponetStatus `json:"componetsstatus,omitempty"`
-
-	// The reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-
-	// A human readable message indicating details about the transition.
-	Message string `json:"message,omitempty"`
+	// ComponetStatus is the status of edgex componet.
+	// +optional
+	ComponetStatus []ComponetStatus `json:"componetstatus,omitempty"`
+	// Current Edgex state
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true

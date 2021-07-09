@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"embed"
 	"flag"
 	"os"
 
@@ -24,27 +25,38 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
+	"github.com/lwmqwer/EdgeX/controllers"
+	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
-	"github.com/lwmqwer/EdgeX/controllers"
+	"sigs.k8s.io/yaml"
 	//+kubebuilder:scaffold:imports
 )
+
+type EdgeXConfiguration struct {
+	Version     string                                  `json:"version,omitempty"`
+	Services    []devicev1alpha1.ServiceTemplateSpec    `json:"services,omitempty"`
+	Deployments []devicev1alpha1.DeploymentTemplateSpec `json:"deployments,omitempty"`
+}
 
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+	//go:embed EdgeXConfig
+	edgeXconfig embed.FS
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(devicev1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(unitv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -64,6 +76,30 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	files, err := edgeXconfig.ReadDir("EdgeXConfig")
+	if err != nil {
+		setupLog.Error(err, "File to open the embed EdgeX config")
+		os.Exit(1)
+	}
+	for _, file := range files {
+		var edgexconfig EdgeXConfiguration
+		if file.IsDir() {
+			continue
+		}
+		configdata, err := edgeXconfig.ReadFile("EdgeXConfig/" + file.Name())
+		if err != nil {
+			setupLog.Error(err, "File to open the embed EdgeX config")
+			os.Exit(1)
+		}
+		err = yaml.Unmarshal(configdata, &edgexconfig)
+		if err != nil {
+			setupLog.Error(err, "Wrong edgeX configuration file")
+			os.Exit(1)
+		}
+		controllers.CoreDeployment[edgexconfig.Version] = edgexconfig.Deployments
+		controllers.CoreServices[edgexconfig.Version] = edgexconfig.Services
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
