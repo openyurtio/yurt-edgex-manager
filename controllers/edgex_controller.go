@@ -85,7 +85,7 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// The object is being deleted
 		if containsString(edgex.GetFinalizers(), FinalizerName) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.cleanUpRelateResources(edgex); err != nil {
+			if err := r.cleanUpRelateResources(ctx, edgex); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried
 				return ctrl.Result{}, err
@@ -110,7 +110,7 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		configmap.Data[k] = v
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configmap, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, configmap, func() error {
 		return controllerutil.SetOwnerReference(edgex, configmap, r.Scheme)
 	})
 
@@ -127,7 +127,7 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	for _, desireservice := range CoreServices[edgex.Spec.Version] {
-		if err := r.createOrUpdateService(ctx, edgex, &desireservice, service); err != nil {
+		if err := r.createOrPatchService(ctx, edgex, &desireservice, service); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -140,7 +140,7 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 
 		if desirecomponent.Service.Name != "" {
-			if err := r.createOrUpdateService(ctx, edgex, &desirecomponent.Service, service); err != nil {
+			if err := r.createOrPatchService(ctx, edgex, &desirecomponent.Service, service); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -152,12 +152,49 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, r.Status().Update(ctx, edgex)
 }
 
-func (r *EdgeXReconciler) cleanUpRelateResources(edgex *devicev1alpha1.EdgeX) error {
+func (r *EdgeXReconciler) cleanUpRelateResources(ctx context.Context, edgex *devicev1alpha1.EdgeX) error {
 	//
 	// delete any external resources associated with the cronJob
 	//
 	// Ensure that delete implementation is idempotent and safe to invoke
 	// multiple times for same object.
+	ud := &unitv1alpha1.UnitedDeployment{}
+	for _, desireDeployment := range CoreDeployment[edgex.Spec.Version] {
+
+		err := r.Get(ctx, types.NamespacedName{Namespace: edgex.Namespace,
+			Name: desireDeployment.Name}, ud)
+
+		if err == nil {
+			for i, pool := range ud.Spec.Topology.Pools {
+				if pool.Name == edgex.Spec.PoolName {
+					ud.Spec.Topology.Pools[i] = ud.Spec.Topology.Pools[len(ud.Spec.Topology.Pools)-1]
+					ud.Spec.Topology.Pools = ud.Spec.Topology.Pools[:len(ud.Spec.Topology.Pools)-1]
+				}
+			}
+			if err := r.Update(ctx, ud); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, desirecomponent := range edgex.Spec.AdditionalComponents {
+		if desirecomponent.Deployment.Name != "" {
+			err := r.Get(ctx, types.NamespacedName{Namespace: edgex.Namespace,
+				Name: desirecomponent.Deployment.Name}, ud)
+
+			if err == nil {
+				for i, pool := range ud.Spec.Topology.Pools {
+					if pool.Name == edgex.Spec.PoolName {
+						ud.Spec.Topology.Pools[i] = ud.Spec.Topology.Pools[len(ud.Spec.Topology.Pools)-1]
+						ud.Spec.Topology.Pools = ud.Spec.Topology.Pools[:len(ud.Spec.Topology.Pools)-1]
+					}
+				}
+				if err := r.Update(ctx, ud); err != nil {
+					return err
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -229,7 +266,7 @@ func (r *EdgeXReconciler) createOrUpdateUnitDeployment(ctx context.Context,
 	return nil
 }
 
-func (r *EdgeXReconciler) createOrUpdateService(ctx context.Context,
+func (r *EdgeXReconciler) createOrPatchService(ctx context.Context,
 	edgex *devicev1alpha1.EdgeX,
 	ds *devicev1alpha1.ServiceTemplateSpec,
 	s *corev1.Service) error {
@@ -250,7 +287,7 @@ func (r *EdgeXReconciler) createOrUpdateService(ctx context.Context,
 		s.Labels[k] = v
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, s, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, s, func() error {
 		return controllerutil.SetOwnerReference(edgex, s, r.Scheme)
 	})
 
@@ -260,23 +297,25 @@ func (r *EdgeXReconciler) createOrUpdateService(ctx context.Context,
 // SetupWithManager sets up the controller with the Manager.
 func (r *EdgeXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &unitv1alpha1.UnitedDeployment{}, udOwnerKey, func(rawObj client.Object) []string {
-		// grab the uniteddeployment object, extract the owner...
-		ud := rawObj.(*unitv1alpha1.UnitedDeployment)
-		owner := metav1.GetControllerOf(ud)
-		if owner == nil {
-			return nil
-		}
-		// ...make sure it's a EdgeX...
-		if owner.APIVersion != devicev1alpha1.GroupVersion.String() || owner.Kind != "EdgeX" {
-			return nil
-		}
+	/*
+		if err := mgr.GetFieldIndexer().IndexField(context.Background(), &unitv1alpha1.UnitedDeployment{}, udOwnerKey, func(rawObj client.Object) []string {
+			// grab the uniteddeployment object, extract the owner...
+			ud := rawObj.(*unitv1alpha1.UnitedDeployment)
+			owner := metav1.GetControllerOf(ud)
+			if owner == nil {
+				return nil
+			}
+			// ...make sure it's a EdgeX...
+			if owner.APIVersion != devicev1alpha1.GroupVersion.String() || owner.Kind != "EdgeX" {
+				return nil
+			}
 
-		// ...and if so, return it
-		return []string{owner.Name}
-	}); err != nil {
-		return err
-	}
+			// ...and if so, return it
+			return []string{owner.Name}
+		}); err != nil {
+			return err
+		}
+	*/
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devicev1alpha1.EdgeX{}).
