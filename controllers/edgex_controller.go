@@ -233,39 +233,28 @@ func (r *EdgeXReconciler) createOrUpdateService(ctx context.Context,
 	edgex *devicev1alpha1.EdgeX,
 	ds *devicev1alpha1.ServiceTemplateSpec,
 	s *corev1.Service) error {
-	if err := r.Get(ctx,
-		types.NamespacedName{Namespace: edgex.Namespace,
-			Name: ds.Name}, s); err != nil {
-		s = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        ds.Name,
-				Namespace:   edgex.Namespace,
-			},
-			Spec: *ds.Spec.DeepCopy(),
-		}
-		for k, v := range ds.Annotations {
-			s.Annotations[k] = v
-		}
-		for k, v := range ds.Labels {
-			s.Labels[k] = v
-		}
-		if err := controllerutil.SetOwnerReference(edgex, s, r.Scheme); err != nil {
-			return err
-		}
-		if err := r.Create(ctx, s); err != nil {
-			return err
-		}
-	} else {
-		if err := controllerutil.SetOwnerReference(edgex, s, r.Scheme); err != nil {
-			return err
-		}
-		if err := r.Update(ctx, s); err != nil {
-			return err
-		}
+
+	s = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        ds.Name,
+			Namespace:   edgex.Namespace,
+		},
+		Spec: *ds.Spec.DeepCopy(),
 	}
-	return nil
+	for k, v := range ds.Annotations {
+		s.Annotations[k] = v
+	}
+	for k, v := range ds.Labels {
+		s.Labels[k] = v
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, s, func() error {
+		return controllerutil.SetOwnerReference(edgex, s, r.Scheme)
+	})
+
+	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
