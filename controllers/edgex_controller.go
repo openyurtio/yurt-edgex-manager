@@ -39,7 +39,6 @@ const (
 	LabelEdgeXDeployment = "www.edgexfoundry.org/deployment"
 
 	LabelEdgeXService = "www.edgexfoundry.org/service"
-
 	// name of finalizer
 	FinalizerName = "www.edgexfoundry.org/finalizer"
 )
@@ -53,6 +52,7 @@ type EdgeXReconciler struct {
 var (
 	CoreDeployment map[string][]devicev1alpha1.DeploymentTemplateSpec = make(map[string][]devicev1alpha1.DeploymentTemplateSpec)
 	CoreServices   map[string][]devicev1alpha1.ServiceTemplateSpec    = make(map[string][]devicev1alpha1.ServiceTemplateSpec)
+	CoreConfigMap  map[string]corev1.ConfigMap                        = make(map[string]corev1.ConfigMap)
 )
 
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes,verbs=get;list;watch;create;update;patch;delete
@@ -100,6 +100,22 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
+	}
+
+	configmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CoreConfigMap[edgex.Spec.Version].Name,
+		Namespace: edgex.Namespace},
+		Data: make(map[string]string)}
+
+	for k, v := range CoreConfigMap[edgex.Spec.Version].Data {
+		configmap.Data[k] = v
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configmap, func() error {
+		return controllerutil.SetOwnerReference(edgex, configmap, r.Scheme)
+	})
+
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	for _, desireDeployment := range CoreDeployment[edgex.Spec.Version] {

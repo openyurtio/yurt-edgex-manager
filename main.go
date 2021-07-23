@@ -28,6 +28,7 @@ import (
 	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
 	"github.com/lwmqwer/EdgeX/controllers"
 	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -40,6 +41,7 @@ import (
 
 type EdgeXConfiguration struct {
 	Version     string                                  `json:"version,omitempty"`
+	Configmap   corev1.ConfigMap                        `json:"configmap,omitempty"`
 	Services    []devicev1alpha1.ServiceTemplateSpec    `json:"services,omitempty"`
 	Deployments []devicev1alpha1.DeploymentTemplateSpec `json:"deployments,omitempty"`
 }
@@ -99,6 +101,7 @@ func main() {
 		}
 		controllers.CoreDeployment[edgexconfig.Version] = edgexconfig.Deployments
 		controllers.CoreServices[edgexconfig.Version] = edgexconfig.Services
+		controllers.CoreConfigMap[edgexconfig.Version] = edgexconfig.Configmap
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
