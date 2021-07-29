@@ -20,6 +20,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 // DeploymentTemplateSpec defines the pool template of Deployment.
@@ -51,31 +53,16 @@ type EdgeXSpec struct {
 	AdditionalComponents []ComponetSpec `json:"additinalcomponets,omitempty"`
 }
 
-type ComponetStatus struct {
-	Name string `json:"name,omitempty"`
-
-	Deployment appsv1.DeploymentStatus `json:"deploymentstatus,omitempty"`
-}
-
 // EdgeXStatus defines the observed state of EdgeX
 type EdgeXStatus struct {
-	// ObservedGeneration is the most recent generation observed for this UnitedDeployment. It corresponds to the
-	// UnitedDeployment's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	Ready bool `json:"ready,omitempty"`
 
 	Initialized bool `json:"initialized,omitempty"`
 
-	// ComponetStatus is the status of edgex componet.
-	// +optional
-	ComponetStatus []ComponetStatus `json:"componetstatus,omitempty"`
 	// Current Edgex state
 	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -89,6 +76,14 @@ type EdgeX struct {
 
 	Spec   EdgeXSpec   `json:"spec,omitempty"`
 	Status EdgeXStatus `json:"status,omitempty"`
+}
+
+func (c *EdgeX) GetConditions() clusterv1.Conditions {
+	return c.Status.Conditions
+}
+
+func (c *EdgeX) SetConditions(conditions clusterv1.Conditions) {
+	c.Status.Conditions = conditions
 }
 
 //+kubebuilder:object:root=true

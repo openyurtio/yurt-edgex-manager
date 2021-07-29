@@ -18,23 +18,25 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
+	"github.com/go-logr/logr"
+	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
+	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
-	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
-	udOwnerKey = ".metadata.controller"
 	// LabelDesiredNodePool indicates which nodepool the node want to join
 	LabelEdgeXDeployment = "www.edgexfoundry.org/deployment"
 
@@ -43,9 +45,16 @@ const (
 	FinalizerName = "www.edgexfoundry.org/finalizer"
 )
 
+var (
+	ControlledType     = &devicev1alpha1.EdgeX{}
+	ControlledTypeName = reflect.TypeOf(ControlledType).Elem().Name()
+	ControlledTypeGVK  = devicev1alpha1.GroupVersion.WithKind(ControlledTypeName)
+)
+
 // EdgeXReconciler reconciles a EdgeX object
 type EdgeXReconciler struct {
 	client.Client
+	Logger logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -60,13 +69,14 @@ var (
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/finalizers,verbs=update
 
 func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
 	edgex := &devicev1alpha1.EdgeX{}
 	unitedDeployment := &unitv1alpha1.UnitedDeployment{}
 	service := &corev1.Service{}
 
 	if err := r.Get(ctx, req.NamespacedName, edgex); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -297,28 +307,19 @@ func (r *EdgeXReconciler) createOrPatchService(ctx context.Context,
 // SetupWithManager sets up the controller with the Manager.
 func (r *EdgeXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	/*
-		if err := mgr.GetFieldIndexer().IndexField(context.Background(), &unitv1alpha1.UnitedDeployment{}, udOwnerKey, func(rawObj client.Object) []string {
-			// grab the uniteddeployment object, extract the owner...
-			ud := rawObj.(*unitv1alpha1.UnitedDeployment)
-			owner := metav1.GetControllerOf(ud)
-			if owner == nil {
-				return nil
-			}
-			// ...make sure it's a EdgeX...
-			if owner.APIVersion != devicev1alpha1.GroupVersion.String() || owner.Kind != "EdgeX" {
-				return nil
-			}
-
-			// ...and if so, return it
-			return []string{owner.Name}
-		}); err != nil {
-			return err
-		}
-	*/
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&devicev1alpha1.EdgeX{}).
-		//Owns(&unitv1alpha1.UnitedDeployment{}).
+		For(ControlledType).
+		Watches(
+			&source.Kind{Type: &unitv1alpha1.UnitedDeployment{}},
+			&handler.EnqueueRequestForOwner{OwnerType: ControlledType, IsController: false},
+		).
+		Watches(
+			&source.Kind{Type: &corev1.Service{}},
+			&handler.EnqueueRequestForOwner{OwnerType: ControlledType, IsController: false},
+		).
+		Watches(
+			&source.Kind{Type: &corev1.ConfigMap{}},
+			&handler.EnqueueRequestForOwner{OwnerType: ControlledType, IsController: false},
+		).
 		Complete(r)
 }
