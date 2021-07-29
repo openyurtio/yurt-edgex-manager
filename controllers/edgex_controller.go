@@ -67,6 +67,11 @@ var (
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps.openyurt.io,resources=uniteddeployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps.openyurt.io,resources=uniteddeployments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core,resources=configmaps;services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=configmaps/status;services/status,verbs=get;update;patch
 
 func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	edgex := &devicev1alpha1.EdgeX{}
