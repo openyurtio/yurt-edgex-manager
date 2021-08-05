@@ -24,6 +24,11 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
+const (
+	// name of finalizer
+	EdgexFinalizer = "edgex.edgexfoundry.org"
+)
+
 // DeploymentTemplateSpec defines the pool template of Deployment.
 type DeploymentTemplateSpec struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -36,29 +41,32 @@ type ServiceTemplateSpec struct {
 	Spec              corev1.ServiceSpec `json:"spec"`
 }
 
-type ComponetSpec struct {
-	// +optional
-	Deployment DeploymentTemplateSpec `json:"deploymentspec,omitempty"`
-
-	// +optional
-	Service ServiceTemplateSpec `json:"servicespec,omitempty"`
-}
-
 // EdgeXSpec defines the desired state of EdgeX
 type EdgeXSpec struct {
 	Version string `json:"version,omitempty"`
 
 	PoolName string `json:"poolname,omitempty"`
 	// +optional
-	AdditionalComponents []ComponetSpec `json:"additinalcomponets,omitempty"`
+	AdditionalService []ServiceTemplateSpec `json:"additinalservices,omitempty"`
+
+	// +optional
+	AdditionalDeployment []DeploymentTemplateSpec `json:"additinaldeployments,omitempty"`
 }
 
 // EdgeXStatus defines the observed state of EdgeX
 type EdgeXStatus struct {
 	// +optional
 	Ready bool `json:"ready,omitempty"`
-
+	// +optional
 	Initialized bool `json:"initialized,omitempty"`
+	// +optional
+	ServiceReplicas int32 `json:"servicereplicas,omitempty"`
+	// +optional
+	ServiceReadyReplicas int32 `json:"servicereadyreplicas,omitempty"`
+	// +optional
+	DeploymentReplicas int32 `json:"deploymentreplicas,omitempty"`
+	// +optional
+	DeploymentReadyReplicas int32 `json:"deploymentreadyreplicas,omitempty"`
 
 	// Current Edgex state
 	// +optional

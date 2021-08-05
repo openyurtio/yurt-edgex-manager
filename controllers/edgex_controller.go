@@ -19,10 +19,11 @@ package controllers
 import (
 	"context"
 	"reflect"
+	"time"
 
-	"github.com/go-logr/logr"
 	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
 	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 )
 
 const (
@@ -41,8 +47,6 @@ const (
 	LabelEdgeXDeployment = "www.edgexfoundry.org/deployment"
 
 	LabelEdgeXService = "www.edgexfoundry.org/service"
-	// name of finalizer
-	FinalizerName = "www.edgexfoundry.org/finalizer"
 )
 
 var (
@@ -54,7 +58,6 @@ var (
 // EdgeXReconciler reconciles a EdgeX object
 type EdgeXReconciler struct {
 	client.Client
-	Logger logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -73,11 +76,10 @@ var (
 //+kubebuilder:rbac:groups=core,resources=configmaps;services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=configmaps/status;services/status,verbs=get;update;patch
 
-func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	edgex := &devicev1alpha1.EdgeX{}
-	unitedDeployment := &unitv1alpha1.UnitedDeployment{}
-	service := &corev1.Service{}
+func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+	logger := log.FromContext(ctx)
 
+	edgex := &devicev1alpha1.EdgeX{}
 	if err := r.Get(ctx, req.NamespacedName, edgex); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -85,228 +87,271 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	// examine DeletionTimestamp to determine if object is under deletion
-	if edgex.ObjectMeta.DeletionTimestamp.IsZero() {
-		// The object is not being deleted, so if it does not have our finalizer,
-		// then lets add the finalizer and update the object. This is equivalent
-		// registering our finalizer.
-		if !containsString(edgex.GetFinalizers(), FinalizerName) {
-			controllerutil.AddFinalizer(edgex, FinalizerName)
-			if err := r.Update(ctx, edgex); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
-		// The object is being deleted
-		if containsString(edgex.GetFinalizers(), FinalizerName) {
-			// our finalizer is present, so lets handle any external dependency
-			if err := r.cleanUpRelateResources(ctx, edgex); err != nil {
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried
-				return ctrl.Result{}, err
-			}
-
-			// remove our finalizer from the list and update it.
-			controllerutil.RemoveFinalizer(edgex, FinalizerName)
-			if err := r.Update(ctx, edgex); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Stop reconciliation as the item is being deleted
-		return ctrl.Result{}, nil
+	// Create the patch helper.
+	patchHelper, err := patch.NewHelper(edgex, r.Client)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrapf(
+			err,
+			"failed to init patch helper for %s %s/%s",
+			edgex.GroupVersionKind(),
+			edgex.Namespace,
+			edgex.Name)
 	}
 
-	configmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CoreConfigMap[edgex.Spec.Version].Name,
-		Namespace: edgex.Namespace},
+	// Always issue a patch when exiting this function so changes to the
+	// resource are patched back to the API server.
+	defer func() {
+		// always update the readyCondition.
+		conditions.SetSummary(edgex,
+			conditions.WithConditions(
+				devicev1alpha1.ConfigmapAvailableCondition,
+				devicev1alpha1.DeploymentAvailableCondition,
+				devicev1alpha1.ServiceAvailableCondition,
+			),
+		)
+
+		err := patchHelper.Patch(ctx, edgex)
+
+		// Patch the VSphereMachine resource.
+		if err != nil {
+			if reterr == nil {
+				reterr = err
+			}
+			logger.Error(err, "patch failed", "edgex", edgex.Namespace+"/"+edgex.Name)
+		}
+	}()
+
+	// Handle deleted edgex
+	if !edgex.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, edgex)
+	}
+
+	// Handle non-deleted edgex
+	return r.reconcileNormal(ctx, edgex)
+}
+
+func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1alpha1.EdgeX) (ctrl.Result, error) {
+
+	ud := &unitv1alpha1.UnitedDeployment{}
+	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
+	for _, dd := range desiredeployments {
+
+		if err := r.Get(
+			ctx,
+			types.NamespacedName{Namespace: edgex.Namespace, Name: dd.Name},
+			ud); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		for i, pool := range ud.Spec.Topology.Pools {
+			if pool.Name == edgex.Spec.PoolName {
+				ud.Spec.Topology.Pools[i] = ud.Spec.Topology.Pools[len(ud.Spec.Topology.Pools)-1]
+				ud.Spec.Topology.Pools = ud.Spec.Topology.Pools[:len(ud.Spec.Topology.Pools)-1]
+			}
+		}
+		if err := r.Update(ctx, ud); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	controllerutil.RemoveFinalizer(edgex, devicev1alpha1.EdgexFinalizer)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *EdgeXReconciler) reconcileNormal(ctx context.Context, edgex *devicev1alpha1.EdgeX) (ctrl.Result, error) {
+	controllerutil.AddFinalizer(edgex, devicev1alpha1.EdgexFinalizer)
+
+	edgex.Status.Initialized = true
+
+	if ok, err := r.reconcileConfigmap(ctx, edgex); !ok {
+		if err != nil {
+			conditions.MarkFalse(edgex, devicev1alpha1.ConfigmapAvailableCondition, devicev1alpha1.ConfigmapProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
+			return ctrl.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling configmap for %s", edgex.Namespace+"/"+edgex.Name)
+		}
+		conditions.MarkFalse(edgex, devicev1alpha1.ConfigmapAvailableCondition, devicev1alpha1.ConfigmapProvisioningReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	conditions.MarkTrue(edgex, devicev1alpha1.ConfigmapAvailableCondition)
+
+	if ok, err := r.reconcileService(ctx, edgex); !ok {
+		if err != nil {
+			conditions.MarkFalse(edgex, devicev1alpha1.ServiceAvailableCondition, devicev1alpha1.ServiceProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
+			return ctrl.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling Service for %s", edgex.Namespace+"/"+edgex.Name)
+		}
+		conditions.MarkFalse(edgex, devicev1alpha1.ServiceAvailableCondition, devicev1alpha1.ServiceProvisioningReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	conditions.MarkTrue(edgex, devicev1alpha1.ServiceAvailableCondition)
+
+	if ok, err := r.reconcileDeployment(ctx, edgex); !ok {
+		if err != nil {
+			conditions.MarkFalse(edgex, devicev1alpha1.DeploymentAvailableCondition, devicev1alpha1.DeploymentProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
+			return ctrl.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling deployment for %s", edgex.Namespace+"/"+edgex.Name)
+		}
+		conditions.MarkFalse(edgex, devicev1alpha1.DeploymentAvailableCondition, devicev1alpha1.DeploymentProvisioningReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	conditions.MarkTrue(edgex, devicev1alpha1.DeploymentAvailableCondition)
+
+	edgex.Status.Ready = true
+
+	return ctrl.Result{}, nil
+}
+
+func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
+
+	configmap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: CoreConfigMap[edgex.Spec.Version].Name,
+			Namespace: edgex.Namespace},
 		Data: make(map[string]string)}
 
 	for k, v := range CoreConfigMap[edgex.Spec.Version].Data {
 		configmap.Data[k] = v
 	}
 
-	_, err := controllerutil.CreateOrPatch(ctx, r.Client, configmap, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configmap, func() error {
 		return controllerutil.SetOwnerReference(edgex, configmap, r.Scheme)
 	})
 
 	if err != nil {
-		return ctrl.Result{}, err
+		return false, err
 	}
 
-	for _, desireDeployment := range CoreDeployment[edgex.Spec.Version] {
-		if err := r.createOrUpdateUnitDeployment(ctx, edgex, &desireDeployment, unitedDeployment); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		//edgex.Status.ComponetStatus = append(edgex.Status.ComponetStatus)
-	}
-
-	for _, desireservice := range CoreServices[edgex.Spec.Version] {
-		if err := r.createOrPatchService(ctx, edgex, &desireservice, service); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	for _, desirecomponent := range edgex.Spec.AdditionalComponents {
-		if desirecomponent.Deployment.Name != "" {
-			if err := r.createOrUpdateUnitDeployment(ctx, edgex, &desirecomponent.Deployment, unitedDeployment); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
-		if desirecomponent.Service.Name != "" {
-			if err := r.createOrPatchService(ctx, edgex, &desirecomponent.Service, service); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	// Update status
-	edgex.Status.Initialized = true
-
-	return ctrl.Result{}, r.Status().Update(ctx, edgex)
+	return true, nil
 }
 
-func (r *EdgeXReconciler) cleanUpRelateResources(ctx context.Context, edgex *devicev1alpha1.EdgeX) error {
-	//
-	// delete any external resources associated with the cronJob
-	//
-	// Ensure that delete implementation is idempotent and safe to invoke
-	// multiple times for same object.
-	ud := &unitv1alpha1.UnitedDeployment{}
-	for _, desireDeployment := range CoreDeployment[edgex.Spec.Version] {
+func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
+	desireservices := append(CoreServices[edgex.Spec.Version], edgex.Spec.AdditionalService...)
+	var readyservice int32
 
-		err := r.Get(ctx, types.NamespacedName{Namespace: edgex.Namespace,
-			Name: desireDeployment.Name}, ud)
+	defer func() {
+		edgex.Status.ServiceReplicas = int32(len(desireservices))
+		edgex.Status.ServiceReadyReplicas = readyservice
+	}()
 
-		if err == nil {
-			for i, pool := range ud.Spec.Topology.Pools {
-				if pool.Name == edgex.Spec.PoolName {
-					ud.Spec.Topology.Pools[i] = ud.Spec.Topology.Pools[len(ud.Spec.Topology.Pools)-1]
-					ud.Spec.Topology.Pools = ud.Spec.Topology.Pools[:len(ud.Spec.Topology.Pools)-1]
-				}
-			}
-			if err := r.Update(ctx, ud); err != nil {
-				return err
-			}
-		}
-	}
-
-	for _, desirecomponent := range edgex.Spec.AdditionalComponents {
-		if desirecomponent.Deployment.Name != "" {
-			err := r.Get(ctx, types.NamespacedName{Namespace: edgex.Namespace,
-				Name: desirecomponent.Deployment.Name}, ud)
-
-			if err == nil {
-				for i, pool := range ud.Spec.Topology.Pools {
-					if pool.Name == edgex.Spec.PoolName {
-						ud.Spec.Topology.Pools[i] = ud.Spec.Topology.Pools[len(ud.Spec.Topology.Pools)-1]
-						ud.Spec.Topology.Pools = ud.Spec.Topology.Pools[:len(ud.Spec.Topology.Pools)-1]
-					}
-				}
-				if err := r.Update(ctx, ud); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *EdgeXReconciler) createOrUpdateUnitDeployment(ctx context.Context,
-	edgex *devicev1alpha1.EdgeX,
-	dd *devicev1alpha1.DeploymentTemplateSpec,
-	ud *unitv1alpha1.UnitedDeployment) error {
-	if err := r.Get(ctx,
-		types.NamespacedName{Namespace: edgex.Namespace,
-			Name: dd.Name}, ud); err != nil {
-		ud = &unitv1alpha1.UnitedDeployment{
+	for _, desireservice := range desireservices {
+		service := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels:      make(map[string]string),
 				Annotations: make(map[string]string),
-				Name:        dd.Name,
+				Name:        desireservice.Name,
 				Namespace:   edgex.Namespace,
 			},
-			Spec: unitv1alpha1.UnitedDeploymentSpec{
-				Selector: dd.Spec.Selector.DeepCopy(),
-				WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
-					DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{ObjectMeta: *dd.Spec.Template.ObjectMeta.DeepCopy(),
-						Spec: *dd.Spec.DeepCopy()},
-				},
-			},
+			Spec: *desireservice.Spec.DeepCopy(),
 		}
-		pool := unitv1alpha1.Pool{Name: edgex.Spec.PoolName,
-			Replicas: pointer.Int32Ptr(1)}
-		pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
-			corev1.NodeSelectorRequirement{Key: unitv1alpha1.LabelCurrentNodePool,
-				Operator: corev1.NodeSelectorOpIn,
-				Values:   []string{edgex.Spec.PoolName}})
-		ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
-		if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
-			return err
+		for k, v := range desireservice.Annotations {
+			desireservice.Annotations[k] = v
 		}
-		if err := r.Create(ctx, ud); err != nil {
-			return err
+		for k, v := range desireservice.Labels {
+			desireservice.Labels[k] = v
 		}
-	} else {
-		for _, pool := range ud.Spec.Topology.Pools {
-			if pool.Name == edgex.Spec.PoolName {
-				return nil
-			}
+
+		_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
+			return controllerutil.SetOwnerReference(edgex, service, r.Scheme)
+		})
+
+		if err != nil {
+			return false, err
 		}
-		pool := unitv1alpha1.Pool{Name: edgex.Spec.PoolName,
-			Replicas: pointer.Int32Ptr(1)}
-		pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
-			corev1.NodeSelectorRequirement{Key: unitv1alpha1.LabelCurrentNodePool,
-				Operator: corev1.NodeSelectorOpIn,
-				Values:   []string{edgex.Spec.PoolName}})
-		ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
-		if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
-			return err
-		}
-		if err := r.Update(ctx, ud); err != nil {
-			return err
-		}
+
+		readyservice++
 	}
-	return nil
+
+	return true, nil
 }
 
-func (r *EdgeXReconciler) createOrPatchService(ctx context.Context,
-	edgex *devicev1alpha1.EdgeX,
-	ds *devicev1alpha1.ServiceTemplateSpec,
-	s *corev1.Service) error {
+func (r *EdgeXReconciler) reconcileDeployment(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
+	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
+	var readydeployment int32
 
-	s = &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
-			Name:        ds.Name,
-			Namespace:   edgex.Namespace,
-		},
-		Spec: *ds.Spec.DeepCopy(),
-	}
-	for k, v := range ds.Annotations {
-		s.Annotations[k] = v
-	}
-	for k, v := range ds.Labels {
-		s.Labels[k] = v
+	defer func() {
+		edgex.Status.DeploymentReplicas = int32(len(desiredeployments))
+		edgex.Status.DeploymentReadyReplicas = readydeployment
+	}()
+
+NextUD:
+	for _, desireDeployment := range desiredeployments {
+		ud := &unitv1alpha1.UnitedDeployment{}
+		err := r.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: edgex.Namespace,
+				Name:      desireDeployment.Name},
+			ud)
+
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return false, err
+			}
+
+			ud = &unitv1alpha1.UnitedDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      make(map[string]string),
+					Annotations: make(map[string]string),
+					Name:        desireDeployment.Name,
+					Namespace:   edgex.Namespace,
+				},
+				Spec: unitv1alpha1.UnitedDeploymentSpec{
+					Selector: desireDeployment.Spec.Selector.DeepCopy(),
+					WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
+						DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{
+							ObjectMeta: *desireDeployment.Spec.Template.ObjectMeta.DeepCopy(),
+							Spec:       *desireDeployment.Spec.DeepCopy()},
+					},
+				},
+			}
+			pool := unitv1alpha1.Pool{
+				Name:     edgex.Spec.PoolName,
+				Replicas: pointer.Int32Ptr(1),
+			}
+			pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
+				corev1.NodeSelectorRequirement{
+					Key:      unitv1alpha1.LabelCurrentNodePool,
+					Operator: corev1.NodeSelectorOpIn,
+					Values:   []string{edgex.Spec.PoolName},
+				})
+			ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
+			if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
+				return false, err
+			}
+			if err := r.Create(ctx, ud); err != nil {
+				return false, err
+			}
+		} else {
+			for _, pool := range ud.Spec.Topology.Pools {
+				if pool.Name == edgex.Spec.PoolName {
+					if ud.Status.ReadyReplicas == ud.Status.Replicas {
+						readydeployment++
+					}
+					continue NextUD
+				}
+			}
+
+			pool := unitv1alpha1.Pool{
+				Name:     edgex.Spec.PoolName,
+				Replicas: pointer.Int32Ptr(1),
+			}
+			pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
+				corev1.NodeSelectorRequirement{
+					Key:      unitv1alpha1.LabelCurrentNodePool,
+					Operator: corev1.NodeSelectorOpIn,
+					Values:   []string{edgex.Spec.PoolName},
+				})
+			ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
+			if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
+				return false, err
+			}
+			if err := r.Update(ctx, ud); err != nil {
+				return false, err
+			}
+		}
 	}
 
-	_, err := controllerutil.CreateOrPatch(ctx, r.Client, s, func() error {
-		return controllerutil.SetOwnerReference(edgex, s, r.Scheme)
-	})
-
-	return err
+	return readydeployment == int32(len(desiredeployments)), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
