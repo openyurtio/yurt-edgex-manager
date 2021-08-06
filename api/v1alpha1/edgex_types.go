@@ -76,6 +76,12 @@ type EdgeXStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:path=edgexes
+//+kubebuilder:resource:shortName=edgex
+//+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="The edgex ready status"
+//+kubebuilder:printcolumn:name="Service",type="integer",JSONPath=".status.servicereplicas",description="The Service Replica."
+//+kubebuilder:printcolumn:name="ReadyService",type="integer",JSONPath=".status.servicereadyreplicas",description="The Ready Service Replica."
+//+kubebuilder:printcolumn:name="Deployment",type="integer",JSONPath=".status.deploymentreplicas",description="The Deployment Replica."
+//+kubebuilder:printcolumn:name="ReadyDeployment",type="integer",JSONPath=".status.deploymentreadyreplicas",description="The Ready Deployment Replica."
 
 // EdgeX is the Schema for the edgexes API
 type EdgeX struct {
