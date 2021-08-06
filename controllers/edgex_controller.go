@@ -322,13 +322,11 @@ NextUD:
 				return false, err
 			}
 		} else {
-			for _, pool := range ud.Spec.Topology.Pools {
-				if pool.Name == edgex.Spec.PoolName {
-					if ud.Status.ReadyReplicas == ud.Status.Replicas {
-						readydeployment++
-					}
-					continue NextUD
+			if replica, ok := ud.Status.PoolReplicas[edgex.Spec.PoolName]; ok {
+				if replica == 1 {
+					readydeployment++
 				}
+				continue NextUD
 			}
 
 			pool := unitv1alpha1.Pool{
