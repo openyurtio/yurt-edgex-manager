@@ -27,6 +27,8 @@ import (
 const (
 	// name of finalizer
 	EdgexFinalizer = "edgex.edgexfoundry.org"
+
+	LabelEdgeXGenerate = "www.edgexfoundry.org/generate"
 )
 
 // DeploymentTemplateSpec defines the pool template of Deployment.

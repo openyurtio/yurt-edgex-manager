@@ -1,0 +1,59 @@
+apiVersion: device.openyurt.io/v1alpha1
+kind: EdgeX
+metadata:
+  name: edgex-sample-hangzhou
+spec:
+  version: hanoi
+  poolname: hangzhou
+  additinalservices:
+  - metadata:
+      name: edgex-device-virtual
+    spec:
+      type: NodePort
+      selector:
+        app: edgex-device-virtual
+      ports:
+      - name: http
+        port: 49990
+        protocol: TCP
+        targetPort: 49990
+        nodePort: 30090
+  - metadata:
+      name: edgex-device-rest
+    spec:
+      type: NodePort
+      selector:
+        app: edgex-device-rest
+      ports:
+      - name: http
+        port: 49986
+        protocol: TCP
+        targetPort: 49986
+        nodePort: 30086
+  additinaldeployments:
+  - metadata:
+      name: edgex-device-virtual
+    spec:
+      selector:
+        matchLabels:
+          app: edgex-device-virtual
+      template:
+        metadata:
+          labels:
+            app: edgex-device-virtual
+        spec:
+          hostname: edgex-device-virtual
+          containers:
+          - name: edgex-device-virtual
+            image: edgexfoundry/docker-device-virtual-go:1.3.0
+            imagePullPolicy: IfNotPresent
+            ports:
+            - name: http
+              protocol: TCP
+              containerPort: 49990
+            envFrom:
+            - configMapRef:
+                name: common-variables
+            env:
+              - name: Service_Host
+                value: "edgex-device-virtual"

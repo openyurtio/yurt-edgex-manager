@@ -43,10 +43,9 @@ import (
 )
 
 const (
-	// LabelDesiredNodePool indicates which nodepool the node want to join
-	LabelEdgeXDeployment = "www.edgexfoundry.org/deployment"
-
-	LabelEdgeXService = "www.edgexfoundry.org/service"
+	LabelConfigmap  = "Configmap"
+	LabelService    = "Service"
+	LabelDeployment = "Deployment"
 )
 
 var (
@@ -140,7 +139,7 @@ func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1al
 			ctx,
 			types.NamespacedName{Namespace: edgex.Namespace, Name: dd.Name},
 			ud); err != nil {
-			return ctrl.Result{}, err
+			continue
 		}
 
 		for i, pool := range ud.Spec.Topology.Pools {
@@ -202,23 +201,58 @@ func (r *EdgeXReconciler) reconcileNormal(ctx context.Context, edgex *devicev1al
 	return ctrl.Result{}, nil
 }
 
+func (r *EdgeXReconciler) removeOwner(ctx context.Context, edgex *devicev1alpha1.EdgeX, obj client.Object) error {
+	owners := obj.GetOwnerReferences()
+	for i, owner := range owners {
+		if owner.UID == edgex.UID {
+			owners[i] = owners[len(owners)-1]
+			owners = owners[:len(owners)-1]
+
+			if len(owners) == 0 {
+				return r.Delete(ctx, obj)
+			} else {
+				obj.SetOwnerReferences(owners)
+				return r.Update(ctx, obj)
+			}
+		}
+	}
+	return nil
+}
+
 func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
+	configmap := &corev1.ConfigMap{}
 
-	configmap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: CoreConfigMap[edgex.Spec.Version].Name,
-			Namespace: edgex.Namespace},
-		Data: make(map[string]string)}
+	if _, ok := CoreConfigMap[edgex.Spec.Version]; ok {
 
-	for k, v := range CoreConfigMap[edgex.Spec.Version].Data {
-		configmap.Data[k] = v
+		configmap.ObjectMeta = metav1.ObjectMeta{
+			Labels:    make(map[string]string),
+			Name:      CoreConfigMap[edgex.Spec.Version].Name,
+			Namespace: edgex.Namespace,
+		}
+		configmap.Data = make(map[string]string)
+		configmap.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelConfigmap
+
+		for k, v := range CoreConfigMap[edgex.Spec.Version].Data {
+			configmap.Data[k] = v
+		}
+
+		_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configmap, func() error {
+			return controllerutil.SetOwnerReference(edgex, configmap, r.Scheme)
+		})
+
+		if err != nil {
+			return false, err
+		}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configmap, func() error {
-		return controllerutil.SetOwnerReference(edgex, configmap, r.Scheme)
-	})
-
-	if err != nil {
-		return false, err
+	configmaplist := &corev1.ConfigMapList{}
+	if err := r.List(ctx, configmaplist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelConfigmap}); err == nil {
+		for _, c := range configmaplist.Items {
+			if c.Name == configmap.Name {
+				continue
+			}
+			r.removeOwner(ctx, edgex, &c)
+		}
 	}
 
 	return true, nil
@@ -226,6 +260,7 @@ func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev
 
 func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
 	desireservices := append(CoreServices[edgex.Spec.Version], edgex.Spec.AdditionalService...)
+	needservices := make(map[string]bool)
 	var readyservice int32
 
 	defer func() {
@@ -234,6 +269,7 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 	}()
 
 	for _, desireservice := range desireservices {
+		needservices[desireservice.Name] = true
 		service := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels:      make(map[string]string),
@@ -244,15 +280,21 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 			Spec: *desireservice.Spec.DeepCopy(),
 		}
 		for k, v := range desireservice.Annotations {
-			desireservice.Annotations[k] = v
+			service.Annotations[k] = v
 		}
 		for k, v := range desireservice.Labels {
-			desireservice.Labels[k] = v
+			service.Labels[k] = v
 		}
+		service.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelService
 
-		_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
-			return controllerutil.SetOwnerReference(edgex, service, r.Scheme)
-		})
+		_, err := controllerutil.CreateOrUpdate(
+			ctx,
+			r.Client,
+			service,
+			func() error {
+				return controllerutil.SetOwnerReference(edgex, service, r.Scheme)
+			},
+		)
 
 		if err != nil {
 			return false, err
@@ -261,11 +303,22 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 		readyservice++
 	}
 
+	servicelist := &corev1.ServiceList{}
+	if err := r.List(ctx, servicelist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelService}); err == nil {
+		for _, s := range servicelist.Items {
+			if _, ok := needservices[s.Name]; ok {
+				continue
+			}
+			r.removeOwner(ctx, edgex, &s)
+		}
+	}
+
 	return true, nil
 }
 
 func (r *EdgeXReconciler) reconcileDeployment(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
 	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
+	needdeployments := make(map[string]bool)
 	var readydeployment int32
 
 	defer func() {
@@ -275,6 +328,8 @@ func (r *EdgeXReconciler) reconcileDeployment(ctx context.Context, edgex *device
 
 NextUD:
 	for _, desireDeployment := range desiredeployments {
+		needdeployments[desireDeployment.Name] = true
+
 		ud := &unitv1alpha1.UnitedDeployment{}
 		err := r.Get(
 			ctx,
@@ -304,6 +359,7 @@ NextUD:
 					},
 				},
 			}
+			ud.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelDeployment
 			pool := unitv1alpha1.Pool{
 				Name:     edgex.Spec.PoolName,
 				Replicas: pointer.Int32Ptr(1),
@@ -322,8 +378,8 @@ NextUD:
 				return false, err
 			}
 		} else {
-			if replica, ok := ud.Status.PoolReplicas[edgex.Spec.PoolName]; ok {
-				if replica == 1 {
+			if _, ok := ud.Status.PoolReplicas[edgex.Spec.PoolName]; ok {
+				if ud.Status.ReadyReplicas == ud.Status.Replicas {
 					readydeployment++
 				}
 				continue NextUD
@@ -346,6 +402,16 @@ NextUD:
 			if err := r.Update(ctx, ud); err != nil {
 				return false, err
 			}
+		}
+	}
+
+	deploymentlist := &unitv1alpha1.UnitedDeploymentList{}
+	if err := r.List(ctx, deploymentlist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelDeployment}); err == nil {
+		for _, s := range deploymentlist.Items {
+			if _, ok := needdeployments[s.Name]; ok {
+				continue
+			}
+			r.removeOwner(ctx, edgex, &s)
 		}
 	}
 
