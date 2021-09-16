@@ -11,6 +11,8 @@ Deploy latest yurt-edgex-manager in openyurt cluster
 `kubectl apply -f https://raw.githubusercontent.com/openyurtio/yurt-edgex-manager/main/Documentation/yurt-edgex-manager.yaml`
 ### Usage
 
+#![usage](./Documentation/usage.svg)
+
 ## Contributing 
 
 Contributions are welcome, whether by creating new issues or pull requests. See 
