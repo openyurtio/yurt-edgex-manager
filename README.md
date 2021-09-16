@@ -1,14 +1,15 @@
 # yurt-edgex-manager
 
-Yurt-edgex-manager is openyurt to manager EdgeX lifecycle controller, it contains one CR to reprents one EdgeX 
-deployment, 
+Yurt-edgex-manager is openyurt to manager EdgeX lifecycle controller, it contains one CR (Custormer Resource) to reprents one EdgeX 
+deployment. 
+User now can install, upgrade, delete EdgeX in Openyurt cluster by just manipulating this CR. 
 
 ## Getting Start
+### Deploy yurt-edgex-manager
+Deploy latest yurt-edgex-manager in openyurt cluster
 
-Since the OpenYurt is extended from the upstream Kubernetes using only plugins,
-the NodePool and UnitedDeployment can be used with upstream Kubernetes as well. 
-But to make the best use of them, we recommend using them with the OpenYurt. 
-For a complete example, please check out the [tutorial](docs/yurt-app-manager-tutorial.md)
+`kubectl apply -f https://raw.githubusercontent.com/openyurtio/yurt-edgex-manager/main/Documentation/yurt-edgex-manager.yaml`
+### Usage
 
 ## Contributing 
 
