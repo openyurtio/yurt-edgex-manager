@@ -22,7 +22,7 @@ our [contributing document](https://github.com/openyurtio/openyurt/blob/master/C
 - Dingtalk Group (钉钉讨论群)
 
 <div align="left">
-    <img src="https://github.com/openyurtio/openyurt/blob/master/docs/img/ding.jpeg" width=25% title="dingtalk">
+    <img src="https://github.com/openyurtio/openyurt/blob/master/docs/img/ding.jpg" width=25% title="dingtalk">
 </div>
 
 ## License
