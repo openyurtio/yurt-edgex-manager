@@ -5,6 +5,20 @@ deployment.
 User now can install, upgrade, delete EdgeX in Openyurt cluster by just manipulating this CR. 
 
 ## Getting Start
+### Make binary and docker-img
+User can build the binary from source, golang is required.
+```bash
+# Only for go mod proxy
+go env -w GOPROXY=https://goproxy.cn,direct
+go mod download
+make build
+```
+The generated binary will in the bin/manager
+
+User can build the docker image. The docker is required and you can set IMG to the name you want
+
+`IMG=openyurt/yurt-edgex-manger:v0.1 make docker-build`
+
 ### Deploy yurt-edgex-manager
 Deploy latest yurt-edgex-manager in openyurt cluster
 
