@@ -4547,6 +4547,8 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      nodeSelector:
+        openyurt.io/is-edge-worker: "false"
       containers:
       - args:
         - --secure-listen-address=0.0.0.0:8443
