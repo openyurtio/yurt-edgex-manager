@@ -18,18 +18,6 @@ spec:
         protocol: TCP
         targetPort: 49990
         nodePort: 30090
-  - metadata:
-      name: edgex-device-rest
-    spec:
-      type: NodePort
-      selector:
-        app: edgex-device-rest
-      ports:
-      - name: http
-        port: 49986
-        protocol: TCP
-        targetPort: 49986
-        nodePort: 30086
   additinaldeployments:
   - metadata:
       name: edgex-device-virtual
