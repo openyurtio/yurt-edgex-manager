@@ -1,6 +1,11 @@
-
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+# Define registries
+STAGING_REGISTRY ?= openyurt
+IMAGE_NAME ?= yurt-edgex-manager
+TAG ?= v0.2.0
+
+IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,generateEmbeddedObjectMeta=true"
 
@@ -84,6 +89,9 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+install-file: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default >Documentation/yurt-edgex-manager.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
