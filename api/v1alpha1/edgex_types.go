@@ -47,6 +47,8 @@ type ServiceTemplateSpec struct {
 type EdgeXSpec struct {
 	Version string `json:"version,omitempty"`
 
+	ImageRegistry string `json:"imageregistry,omitempty"`
+
 	PoolName string `json:"poolname,omitempty"`
 	// +optional
 	AdditionalService []ServiceTemplateSpec `json:"additinalservices,omitempty"`

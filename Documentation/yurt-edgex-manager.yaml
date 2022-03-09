@@ -4243,6 +4243,8 @@ spec:
                   - spec
                   type: object
                 type: array
+              imageregistry:
+                type: string
               poolname:
                 type: string
               version:
