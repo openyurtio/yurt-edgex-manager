@@ -22,7 +22,7 @@ User can build the docker image. The docker is required and you can set IMG to t
 ### Deploy yurt-edgex-manager
 Deploy latest yurt-edgex-manager in openyurt cluster
 
-`kubectl apply -f https://raw.githubusercontent.com/openyurtio/yurt-edgex-manager/main/Documentation/yurt-edgex-manager.yaml`
+`kubectl apply -f https://github.com/openyurtio/yurt-edgex-manager/releases/download/v0.1.0/yurt-edgex-manager.yaml`
 ### Usage
 
 ![usage](./Documentation/usage.svg)
