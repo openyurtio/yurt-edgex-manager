@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -109,14 +110,12 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 			),
 		)
 
-		err := patchHelper.Patch(ctx, edgex)
+		if err := patchHelper.Patch(ctx, edgex); err != nil {
+			reterr = kerrors.NewAggregate([]error{reterr, err})
+		}
 
-		// Patch the VSphereMachine resource.
-		if err != nil {
-			if reterr == nil {
-				reterr = err
-			}
-			logger.Error(err, "patch failed", "edgex", edgex.Namespace+"/"+edgex.Name)
+		if reterr != nil {
+			logger.Error(reterr, "reconcile failed", "edgex", edgex.Namespace+"/"+edgex.Name)
 		}
 	}()
 
