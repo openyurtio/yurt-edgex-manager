@@ -1,0 +1,351 @@
+version: jakarta
+configmap:
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: common-variables
+  data:
+    DATABASES_PRIMARY_HOST: edgex-redis
+    CLIENTS_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
+    CLIENTS_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
+    CLIENTS_CORE_COMMAND_HOST: edgex-core-command
+    CLIENTS_CORE_DATA_HOST: edgex-core-data
+    CLIENTS_CORE_METADATA_HOST: edgex-core-metadata
+    REGISTRY_HOST: edgex-core-consul
+    EDGEX_SECURITY_SECRET_STORE: "false"
+services:
+- metadata:
+    name: edgex-core-consul
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-core-consul
+    ports:
+    - name: tcp-8500
+      port: 8500
+      protocol: TCP
+      targetPort: 8500
+      nodePort: 30850
+- metadata:
+    name: edgex-redis
+  spec:
+    selector:
+      app: edgex-redis
+    ports:
+    - name: http
+      protocol: TCP
+      port: 6379
+      targetPort: 6379
+- metadata:
+    name: edgex-support-notifications
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-support-notifications
+    ports:
+    - name: http
+      port: 59860
+      protocol: TCP
+      targetPort: 59860
+      nodePort: 30060
+- metadata:
+    name: edgex-core-metadata
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-core-metadata
+    ports:
+    - name: http
+      port: 59881
+      protocol: TCP
+      targetPort: 59881
+      nodePort: 30081
+- metadata:
+    name: edgex-core-data
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-core-data
+    ports:
+    - name: tcp-5563
+      port: 5563
+      protocol: TCP
+      targetPort: 5563
+    - name: tcp-48080
+      port: 59880
+      protocol: TCP
+      targetPort: 59880
+      nodePort: 30080
+- metadata:
+    name: edgex-core-command
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-core-command
+    ports:
+    - name: http
+      port: 59882
+      protocol: TCP
+      targetPort: 59882
+      nodePort: 30082
+- metadata:
+    name: edgex-support-scheduler
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-support-scheduler
+    ports:
+    - name: http
+      port: 59861
+      protocol: TCP
+      targetPort: 59861
+      nodePort: 30085
+- metadata:
+    name: edgex-app-rules-engine
+  spec:
+    type: NodePort
+    selector:
+      app: edgex-app-rules-engine
+    ports:
+    - name: http
+      port: 59701
+      protocol: TCP
+      targetPort: 59701
+      nodePort: 30100
+deployments:
+- metadata:
+    name: edgex-core-consul
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-core-consul
+    template:
+      metadata:
+        labels:
+          app: edgex-core-consul
+      spec:
+        hostname: edgex-core-consul
+        volumes:
+          - name: consul-config
+            hostPath:
+              path: /consul/config
+              type: DirectoryOrCreate
+          - name: consul-data
+            hostPath:
+              path: /consul/data
+              type: DirectoryOrCreate
+        containers:
+        - name: edgex-core-consul
+          image: consul:1.10.3
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: tcp-8500
+            protocol: TCP
+            containerPort: 8500
+          volumeMounts:
+          - name: consul-config
+            mountPath: /consul/config
+          - name: consul-data
+            mountPath: /consul/data
+- metadata:
+    name: edgex-redis
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-redis
+    template:
+      metadata:
+        labels:
+          app: edgex-redis
+      spec:
+        hostname: edgex-redis
+        volumes:
+          - name: db-data
+            hostPath:
+              path: /data
+              type: DirectoryOrCreate
+        containers:
+        - name: edgex-redis
+          image: redis:6.2.6-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 6379
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          volumeMounts:
+          - name: db-data
+            mountPath: /data
+- metadata:
+    name: edgex-support-notifications
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-support-notifications
+    template:
+      metadata:
+        labels:
+          app: edgex-support-notifications
+      spec:
+        hostname: edgex-support-notifications
+        containers:
+        - name: edgex-support-notifications
+          image: edgexfoundry/support-notifications:2.1.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: SERVICE_HOST
+            value: "edgex-support-notifications"
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 59860
+- metadata:
+    name: edgex-core-metadata
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-core-metadata
+    template:
+      metadata:
+        labels:
+          app: edgex-core-metadata
+      spec:
+        hostname: edgex-core-metadata
+        containers:
+        - name: edgex-core-metadata
+          image: edgexfoundry/core-metadata:2.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 59881
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: NOTIFICATIONS_SENDER
+            value: "edgex-core-metadata"
+          - name: SERVICE_HOST
+            value: "edgex-core-metadata"
+- metadata:
+    name: edgex-core-data
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-core-data
+    template:
+      metadata:
+        labels:
+          app: edgex-core-data
+      spec:
+        hostname: edgex-core-data
+        containers:
+        - name: edgex-core-data
+          image: edgexfoundry/core-data:2.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: tcp-59880
+            protocol: TCP
+            containerPort: 59880
+          - name: tcp-5563
+            protocol: TCP
+            containerPort: 5563
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: MESSAGEQUEUE_HOST
+            value: "edgex-redis"
+          - name: SERVICE_HOST
+            value: "edgex-core-data"
+- metadata:
+    name: edgex-core-command
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-core-command
+    template:
+      metadata:
+        labels:
+          app: edgex-core-command
+      spec:
+        hostname: edgex-core-command
+        containers:
+        - name: edgex-core-command
+          image: edgexfoundry/core-command:2.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 59882
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: SERVICE_HOST
+            value: "edgex-core-command"
+- metadata:
+    name: edgex-support-scheduler
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-support-scheduler
+    template:
+      metadata:
+        labels:
+          app: edgex-support-scheduler
+      spec:
+        hostname: edgex-support-scheduler
+        containers:
+        - name: edgex-support-scheduler
+          image: edgexfoundry/support-scheduler:2.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 59861
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: SERVICE_HOST
+            value: "edgex-support-scheduler"
+          - name: INTERVALACTIONS_SCRUBAGED_HOST
+            value: "edgex-core-data"
+          - name: INTERVALACTIONS_SCRUBPUSHED_HOST
+            value: "edgex-core-data"
+- metadata:
+    name: edgex-app-rules-engine
+  spec:
+    selector:
+      matchLabels:
+        app: edgex-app-rules-engine
+    template:
+      metadata:
+        labels:
+          app: edgex-app-rules-engine
+      spec:
+        hostname: edgex-app-rules-engine
+        containers:
+        - name: edgex-app-rules-engine
+          image: edgexfoundry/app-service-configurable:2.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 59701
+          envFrom:
+          - configMapRef:
+              name: common-variables
+          env:
+          - name: SERVICE_HOST
+            value: "edgex-app-rules-engine"
+          - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
+            value: "edgex-redis"
+          - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
+            value: "edgex-redis"
+          - name: EDGEX_PROFILE
+            value: "rules-engine"

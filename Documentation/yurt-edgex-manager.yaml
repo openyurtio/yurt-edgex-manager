@@ -4243,6 +4243,8 @@ spec:
                   - spec
                   type: object
                 type: array
+              imageregistry:
+                type: string
               poolname:
                 type: string
               version:
@@ -4547,8 +4549,6 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      nodeSelector:
-        openyurt.io/is-edge-worker: "false"
       containers:
       - args:
         - --secure-listen-address=0.0.0.0:8443
@@ -4566,7 +4566,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: openyurt/yurt-edgex-manager:0.1.0
+        image: openyurt/yurt-edgex-manager:v0.2.0
         livenessProbe:
           httpGet:
             path: /healthz
@@ -4589,6 +4589,8 @@ spec:
             memory: 20Mi
         securityContext:
           allowPrivilegeEscalation: false
+      nodeSelector:
+        openyurt.io/is-edge-worker: "false"
       securityContext:
         runAsNonRoot: true
       serviceAccountName: edgex-controller-manager

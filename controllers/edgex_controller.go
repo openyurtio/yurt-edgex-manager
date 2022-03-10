@@ -342,6 +342,13 @@ NextUD:
 			if !apierrors.IsNotFound(err) {
 				return false, err
 			}
+			desirespec := desireDeployment.Spec.DeepCopy()
+
+			if edgex.Spec.ImageRegistry != "" {
+				for i := range desirespec.Template.Spec.Containers {
+					desirespec.Template.Spec.Containers[i].Image = edgex.Spec.ImageRegistry + "/" + desirespec.Template.Spec.Containers[i].Image
+				}
+			}
 
 			ud = &unitv1alpha1.UnitedDeployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -355,10 +362,11 @@ NextUD:
 					WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
 						DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{
 							ObjectMeta: *desireDeployment.Spec.Template.ObjectMeta.DeepCopy(),
-							Spec:       *desireDeployment.Spec.DeepCopy()},
+							Spec:       *desirespec},
 					},
 				},
 			}
+
 			ud.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelDeployment
 			pool := unitv1alpha1.Pool{
 				Name:     edgex.Spec.PoolName,

@@ -22,6 +22,8 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      nodeSelector:
+        openyurt.io/is-edge-worker: "false"
       securityContext:
         runAsNonRoot: true
       containers:

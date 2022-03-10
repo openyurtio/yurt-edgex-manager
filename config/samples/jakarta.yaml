@@ -1,0 +1,8 @@
+apiVersion: device.openyurt.io/v1alpha1
+kind: EdgeX
+metadata:
+  name: edgex-sample-beijing
+spec:
+  version: jakarta
+  poolname: beijing
+  imageregistry: ali
