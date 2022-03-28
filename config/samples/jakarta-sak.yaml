@@ -1,0 +1,48 @@
+apiVersion: device.openyurt.io/v1alpha1
+kind: EdgeX
+metadata:
+  name: edgex-sample-hangzhou
+spec:
+  version: jakarta
+  poolname: hangzhou
+  imageregistry: ali
+  additinalservices:
+  - metadata:
+      name: edgex-device-sak
+    spec:
+      type: NodePort
+      selector:
+        app: edgex-device-sak
+      ports:
+      - name: http
+        port: 59100
+        protocol: TCP
+        targetPort: 59100
+        nodePort: 30090
+  additinaldeployments:
+  - metadata:
+      name: edgex-device-sak
+    spec:
+      selector:
+        matchLabels:
+          app: edgex-device-sak
+      template:
+        metadata:
+          labels:
+            app: edgex-device-sak
+        spec:
+          hostname: edgex-device-sak
+          containers:
+          - name: edgex-device-sak
+            image: lwmqwer/edgex-gpio-demo:v0.1.0
+            imagePullPolicy: IfNotPresent
+            ports:
+            - name: http
+              protocol: TCP
+              containerPort: 59100
+            envFrom:
+            - configMapRef:
+                name: common-variables
+            env:
+              - name: Service_Host
+                value: "edgex-device-sak"
