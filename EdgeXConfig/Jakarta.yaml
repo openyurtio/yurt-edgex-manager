@@ -136,7 +136,7 @@ deployments:
               type: DirectoryOrCreate
         containers:
         - name: edgex-core-consul
-          image: consul:1.10.3
+          image: openyurt/consul:1.10.3
           imagePullPolicy: IfNotPresent
           ports:
           - name: tcp-8500
@@ -166,7 +166,7 @@ deployments:
               type: DirectoryOrCreate
         containers:
         - name: edgex-redis
-          image: redis:6.2.6-alpine
+          image: openyurt/redis:6.2.6-alpine
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 6379
@@ -190,7 +190,7 @@ deployments:
         hostname: edgex-support-notifications
         containers:
         - name: edgex-support-notifications
-          image: edgexfoundry/support-notifications:2.1.0
+          image: openyurt/support-notifications:2.1.0
           imagePullPolicy: IfNotPresent
           envFrom:
           - configMapRef:
@@ -216,7 +216,7 @@ deployments:
         hostname: edgex-core-metadata
         containers:
         - name: edgex-core-metadata
-          image: edgexfoundry/core-metadata:2.1.0
+          image: openyurt/core-metadata:2.1.0
           imagePullPolicy: IfNotPresent
           ports:
           - name: http
@@ -244,7 +244,7 @@ deployments:
         hostname: edgex-core-data
         containers:
         - name: edgex-core-data
-          image: edgexfoundry/core-data:2.1.0
+          image: openyurt/core-data:2.1.0
           imagePullPolicy: IfNotPresent
           ports:
           - name: tcp-59880
@@ -275,7 +275,7 @@ deployments:
         hostname: edgex-core-command
         containers:
         - name: edgex-core-command
-          image: edgexfoundry/core-command:2.1.0
+          image: openyurt/core-command:2.1.0
           imagePullPolicy: IfNotPresent
           ports:
           - name: http
@@ -301,7 +301,7 @@ deployments:
         hostname: edgex-support-scheduler
         containers:
         - name: edgex-support-scheduler
-          image: edgexfoundry/support-scheduler:2.1.0
+          image: openyurt/support-scheduler:2.1.0
           imagePullPolicy: IfNotPresent
           ports:
           - name: http
@@ -331,7 +331,7 @@ deployments:
         hostname: edgex-app-rules-engine
         containers:
         - name: edgex-app-rules-engine
-          image: edgexfoundry/app-service-configurable:2.1.0
+          image: openyurt/app-service-configurable:2.1.0
           imagePullPolicy: IfNotPresent
           ports:
           - name: http
@@ -345,7 +345,7 @@ deployments:
             value: "edgex-app-rules-engine"
           - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
             value: "edgex-redis"
-          - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
+          - name: TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST
             value: "edgex-redis"
           - name: EDGEX_PROFILE
             value: "rules-engine"
