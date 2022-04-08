@@ -5,7 +5,6 @@ metadata:
 spec:
   version: jakarta
   poolname: hangzhou
-  imageregistry: ali
   additinalservices:
   - metadata:
       name: edgex-device-sak
@@ -44,5 +43,7 @@ spec:
             - configMapRef:
                 name: common-variables
             env:
-              - name: Service_Host
+              - name: SERVICE_HOST
                 value: "edgex-device-sak"
+            securityContext:
+                privileged: true
