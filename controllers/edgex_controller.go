@@ -47,6 +47,9 @@ const (
 	LabelConfigmap  = "Configmap"
 	LabelService    = "Service"
 	LabelDeployment = "Deployment"
+
+	AnnotationServiceTopologyKey           = "openyurt.io/topologyKeys"
+	AnnotationServiceTopologyValueNodePool = "openyurt.io/nodepool"
 )
 
 var (
@@ -285,7 +288,7 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 			service.Labels[k] = v
 		}
 		service.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelService
-
+		service.Annotations[AnnotationServiceTopologyKey] = AnnotationServiceTopologyValueNodePool
 		_, err := controllerutil.CreateOrUpdate(
 			ctx,
 			r.Client,
