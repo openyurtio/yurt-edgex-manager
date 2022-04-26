@@ -261,9 +261,16 @@ func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev
 }
 
 func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
-	desireservices := append(CoreServices[edgex.Spec.Version], edgex.Spec.AdditionalService...)
+	desireservices := make(map[string]devicev1alpha1.ServiceTemplateSpec)
 	needservices := make(map[string]bool)
 	var readyservice int32
+
+	for _, coreservice := range CoreServices[edgex.Spec.Version] {
+		desireservices[coreservice.Name] = coreservice
+	}
+	for _, addservice := range edgex.Spec.AdditionalService {
+		desireservices[addservice.Name] = addservice
+	}
 
 	defer func() {
 		edgex.Status.ServiceReplicas = int32(len(desireservices))
@@ -305,6 +312,7 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 		readyservice++
 	}
 
+	/* Remove the service owner that we do not need */
 	servicelist := &corev1.ServiceList{}
 	if err := r.List(ctx, servicelist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelService}); err == nil {
 		for _, s := range servicelist.Items {
@@ -319,9 +327,16 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 }
 
 func (r *EdgeXReconciler) reconcileDeployment(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
-	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
+	desiredeployments := make(map[string]devicev1alpha1.DeploymentTemplateSpec)
 	needdeployments := make(map[string]bool)
 	var readydeployment int32
+
+	for _, coreDeployment := range CoreDeployment[edgex.Spec.Version] {
+		desiredeployments[coreDeployment.Name] = coreDeployment
+	}
+	for _, addDeployment := range edgex.Spec.AdditionalDeployment {
+		desiredeployments[addDeployment.Name] = addDeployment
+	}
 
 	defer func() {
 		edgex.Status.DeploymentReplicas = int32(len(desiredeployments))
