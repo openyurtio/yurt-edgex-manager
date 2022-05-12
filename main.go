@@ -25,9 +25,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
-	"github.com/lwmqwer/EdgeX/controllers"
 	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	"github.com/openyurtio/yurt-edgex-manager/controllers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

@@ -1,4 +1,4 @@
-module github.com/lwmqwer/EdgeX
+module github.com/openyurtio/yurt-edgex-manager
 
 go 1.16
 
