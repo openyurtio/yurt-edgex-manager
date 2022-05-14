@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
+	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
