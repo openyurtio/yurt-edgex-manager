@@ -21,13 +21,14 @@ import (
 	"flag"
 	"os"
 
+	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
+	"github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex/validating"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
-	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
-	"github.com/openyurtio/yurt-edgex-manager/controllers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -36,6 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
+
+	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	"github.com/openyurtio/yurt-edgex-manager/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -66,11 +70,15 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var enableWebhook bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableWebhook, "enable-webhook", false,
+		"Enable webhook for controller manager. "+
+			"Enabling this will ensure edgex resource validation.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -117,6 +125,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// register the field indexers
+	setupLog.Info("registering the field indexers")
+	if err := util.RegisterFieldIndexers(mgr.GetFieldIndexer()); err != nil {
+		setupLog.Error(err, "failed to register field indexers")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.EdgeXReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -124,6 +139,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EdgeX")
 		os.Exit(1)
 	}
+
+	if enableWebhook {
+		if err = (&validating.EdgeX{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EdgeX")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("webhook disabled")
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

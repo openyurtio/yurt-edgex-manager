@@ -15,6 +15,8 @@ COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY EdgeXConfig/ EdgeXConfig/
+COPY pkg/ pkg/
+
 
 # Build
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -o manager main.go

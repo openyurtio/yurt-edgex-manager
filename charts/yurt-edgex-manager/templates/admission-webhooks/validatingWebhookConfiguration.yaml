@@ -1,0 +1,37 @@
+{{- if .Values.admissionWebhooks.enabled -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ template "yurtedgex.fullname" . }}-admission
+  namespace: {{ .Release.Namespace }}
+  {{- if .Values.admissionWebhooks.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s-root-cert" .Release.Namespace (include "yurtedgex.fullname" .) | quote }}
+  {{- end }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: Cg==
+      service:
+        name: {{ template "yurtedgex.name" . }}-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /validate-device-openyurt-io-v1alpha1-edgex
+    {{- if .Values.admissionWebhooks.patch.enabled  }}
+    failurePolicy: Ignore
+    {{- else }}
+    failurePolicy: {{ .Values.admissionWebhooks.failurePolicy }}
+    {{- end }}
+    name: vedgex.kb.io
+    rules:
+      - apiGroups:
+          - device.openyurt.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - edgexes
+    sideEffects: None
+{{- end -}}
