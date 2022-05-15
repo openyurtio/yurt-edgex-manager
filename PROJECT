@@ -14,4 +14,8 @@ resources:
   path: github.com/openyurtio/yurt-edgex-manager/api/v1alpha1
   plural: edgexes
   version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

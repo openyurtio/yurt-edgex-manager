@@ -1,0 +1,42 @@
+
+imageRegistry: ""
+
+manager:
+  image:
+    repository: openyurt/yurt-edgex-manager
+    tag: v0.2.0
+    pullPolicy: IfNotPresent
+
+rbacProxy:
+  image:
+    repository: openyurt/kube-rbac-proxy
+    tag: v0.8.0
+    pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+rbac:
+  create: true
+
+webhookService:
+  type: ClusterIP
+  port: 9443
+
+admissionWebhooks:
+  enabled: true
+  failurePolicy: Fail
+  certificate:
+    mountPath: /etc/k8s-webhook-certs
+  patch:
+    enabled: true
+    image:
+      repository: jettech/kube-webhook-certgen
+      tag: v1.5.2
+      pullPolicy: IfNotPresent
+    affinity: {}
+    tolerations: []
+  certManager:
+    enabled: false
+    revisionHistoryLimit: 3
