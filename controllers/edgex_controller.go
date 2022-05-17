@@ -248,7 +248,7 @@ func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev
 	}
 
 	configmaplist := &corev1.ConfigMapList{}
-	if err := r.List(ctx, configmaplist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelConfigmap}); err == nil {
+	if err := r.List(ctx, configmaplist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelConfigmap}); err == nil {
 		for _, c := range configmaplist.Items {
 			if c.Name == configmap.Name {
 				continue
@@ -314,7 +314,7 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 
 	/* Remove the service owner that we do not need */
 	servicelist := &corev1.ServiceList{}
-	if err := r.List(ctx, servicelist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelService}); err == nil {
+	if err := r.List(ctx, servicelist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelService}); err == nil {
 		for _, s := range servicelist.Items {
 			if _, ok := needservices[s.Name]; ok {
 				continue
@@ -431,7 +431,7 @@ NextUD:
 	}
 
 	deploymentlist := &unitv1alpha1.UnitedDeploymentList{}
-	if err := r.List(ctx, deploymentlist, client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelDeployment}); err == nil {
+	if err := r.List(ctx, deploymentlist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelDeployment}); err == nil {
 		for _, s := range deploymentlist.Items {
 			if _, ok := needdeployments[s.Name]; ok {
 				continue
