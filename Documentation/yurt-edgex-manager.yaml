@@ -4595,3 +4595,7 @@ spec:
         runAsNonRoot: true
       serviceAccountName: edgex-controller-manager
       terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
