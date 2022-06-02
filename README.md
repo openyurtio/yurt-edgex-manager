@@ -1,8 +1,8 @@
 # yurt-edgex-manager
 
-Yurt-edgex-manager is openyurt to manager EdgeX lifecycle controller, it contains one CR (Custormer Resource) to reprents one EdgeX 
-deployment. 
-User now can install, upgrade, delete EdgeX in Openyurt cluster by just manipulating this CR. 
+Yurt-edgex-manager is openyurt to manager EdgeX lifecycle controller, it contains one CR (Custormer Resource) to reprents one EdgeX
+deployment.
+User now can install, upgrade, delete EdgeX in Openyurt cluster by just manipulating this CR.
 
 ## Getting Start
 ### Make binary and docker-img
@@ -27,9 +27,9 @@ Deploy latest yurt-edgex-manager in openyurt cluster
 
 ![usage](./Documentation/usage.svg)
 
-## Contributing 
+## Contributing
 
-Contributions are welcome, whether by creating new issues or pull requests. See 
+Contributions are welcome, whether by creating new issues or pull requests. See
 our [contributing document](https://github.com/openyurtio/openyurt/blob/master/CONTRIBUTING.md) to get started.
 
 ## Contact
@@ -43,8 +43,8 @@ our [contributing document](https://github.com/openyurtio/openyurt/blob/master/C
 </div>
 
 ## License
-Yurt-edgex-manager is under the Apache 2.0 license. See the [LICENSE](LICENSE) file 
-for details. Certain implementations in Yurt-edgex-manager rely on the existing code 
-from [Kubernetes](https://github.com/kubernetes/kubernetes) and 
-[OpenKruise](https://github.com/openkruise/kruise) the credits go to the 
+Yurt-edgex-manager is under the Apache 2.0 license. See the [LICENSE](LICENSE) file
+for details. Certain implementations in Yurt-edgex-manager rely on the existing code
+from [Kubernetes](https://github.com/kubernetes/kubernetes) and
+[OpenKruise](https://github.com/openkruise/kruise) the credits go to the
 original authors.
