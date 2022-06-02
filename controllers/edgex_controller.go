@@ -296,6 +296,9 @@ func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1a
 		}
 		service.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelService
 		service.Annotations[AnnotationServiceTopologyKey] = AnnotationServiceTopologyValueNodePool
+		if edgex.Spec.ServiceType != "" {
+			service.Spec.Type = edgex.Spec.ServiceType
+		}
 		_, err := controllerutil.CreateOrUpdate(
 			ctx,
 			r.Client,
