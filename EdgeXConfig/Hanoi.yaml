@@ -25,7 +25,6 @@ services:
 - metadata:
     name: edgex-core-consul
   spec:
-    type: NodePort
     selector:
       app: edgex-core-consul
     ports:
@@ -33,12 +32,10 @@ services:
       port: 8500
       protocol: TCP
       targetPort: 8500
-      nodePort: 30850
     - name: tcp-8400
       port: 8400
       protocol: TCP
       targetPort: 8400
-      nodePort: 30840
 - metadata:
     name: edgex-redis
   spec:
@@ -52,7 +49,6 @@ services:
 - metadata:
     name: edgex-support-notifications
   spec:
-    type: NodePort
     selector:
       app: edgex-support-notifications
     ports:
@@ -60,11 +56,9 @@ services:
       port: 48060
       protocol: TCP
       targetPort: 48060
-      nodePort: 30060
 - metadata:
     name: edgex-core-metadata
   spec:
-    type: NodePort
     selector:
       app: edgex-core-metadata
     ports:
@@ -72,11 +66,9 @@ services:
       port: 48081
       protocol: TCP
       targetPort: 48081
-      nodePort: 30081
 - metadata:
     name: edgex-core-data
   spec:
-    type: NodePort
     selector:
       app: edgex-core-data
     ports:
@@ -88,11 +80,9 @@ services:
       port: 48080
       protocol: TCP
       targetPort: 48080
-      nodePort: 30080
 - metadata:
     name: edgex-core-command
   spec:
-    type: NodePort
     selector:
       app: edgex-core-command
     ports:
@@ -100,11 +90,9 @@ services:
       port: 48082
       protocol: TCP
       targetPort: 48082
-      nodePort: 30082
 - metadata:
     name: edgex-support-scheduler
   spec:
-    type: NodePort
     selector:
       app: edgex-support-scheduler
     ports:
@@ -112,11 +100,9 @@ services:
       port: 48085
       protocol: TCP
       targetPort: 48085
-      nodePort: 30085
 - metadata:
     name: edgex-app-service-configurable-rules
   spec:
-    type: NodePort
     selector:
       app: edgex-app-service-configurable-rules
     ports:
@@ -124,7 +110,6 @@ services:
       port: 48100
       protocol: TCP
       targetPort: 48100
-      nodePort: 30100
 deployments:
 - metadata:
     name: edgex-core-consul
