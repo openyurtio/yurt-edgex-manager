@@ -24,6 +24,10 @@ spec:
     spec:
       nodeSelector:
         openyurt.io/is-edge-worker: "false"
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
       securityContext:
         runAsNonRoot: true
       containers:
