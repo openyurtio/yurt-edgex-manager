@@ -4,31 +4,18 @@
 #- "gcr.io/k8s-staging-cluster-api/cluster-api-controller-amd64:dev"
 
 
-providers:
+dependences:
 
-- name: cluster-api
-  type: CoreProvider
-  versions:
-  - name: v0.3.23 # latest published release
-    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.23/core-components.yaml"
-    type: "url"
-    replacements:
-    - old: --metrics-addr=127.0.0.1:8080
-      new: --metrics-addr=:8080
-  - name: v0.4.99 # next; use manifest from source files
-    value: ../../../config/default
-    replacements:
-    - old: --metrics-bind-addr=localhost:8080
-      new: --metrics-bind-addr=:8080
-    files:
-    - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+- name: yurt-app-manager
+  url: "https://raw.githubusercontent.com/openyurtio/yurt-app-manager/v0.5.0/config/setup/all_in_one.yaml"
+
 
 variables:
   # Default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different Prow jobs e.g. each one with a K8s version permutation.
   # The following Kubernetes versions should be the latest versions with already published kindest/node images.
   # This avoids building node images in the default case which improves the test duration significantly.
-  KUBERNETES_VERSION_MANAGEMENT: "v1.22.0"
+  KUBERNETES_VERSION_MANAGEMENT: "v1.20.2"
   IP_FAMILY: "IPv4"
 
 intervals:

@@ -55,6 +55,7 @@ type E2EConfig struct {
 	// Images is a list of container images to load into the Kind cluster.
 	Images []string `json:"images,omitempty"`
 
+	Dependences []Dependence `json:"dependences,omitempty"`
 	// Variables to be added to the clusterctl config file
 	// Please note that clusterctl read variables from OS environment variables as well, so you can avoid to hard code
 	// sensitive data in the config file.
@@ -62,6 +63,15 @@ type E2EConfig struct {
 
 	// Intervals to be used for long operations during tests
 	Intervals map[string][]string `json:"intervals,omitempty"`
+}
+
+// ProviderConfig describes a provider to be configured in the local repository that will be created for the e2e test.
+type Dependence struct {
+	// Name is the name of the provider.
+	Name string `json:"name"`
+
+	// Type is the type of the provider.
+	Url string `json:"url"`
 }
 
 // Defaults assigns default values to the object. More specifically:
@@ -86,9 +96,6 @@ func errEmptyArg(argName string) error {
 
 // Validate validates the configuration. More specifically:
 // - ManagementClusterName should not be empty.
-// - There should be one CoreProvider (cluster-api), one BootstrapProvider (kubeadm), one ControlPlaneProvider (kubeadm).
-// - There should be one InfraProvider (pick your own).
-// - Image should have name and loadBehavior be one of [mustload, tryload].
 // - Intervals should be valid ginkgo intervals.
 func (c *E2EConfig) Validate() error {
 	// ManagementClusterName should not be empty.
@@ -96,7 +103,7 @@ func (c *E2EConfig) Validate() error {
 		return errEmptyArg("ManagementClusterName")
 	}
 
-	// Image should have name and loadBehavior be one of [mustload, tryload].
+	// Image should have name.
 	for i, containerImage := range c.Images {
 		if containerImage == "" {
 			return errEmptyArg(fmt.Sprintf("Images[%d].Name=%q", i, containerImage))
@@ -119,14 +126,6 @@ func (c *E2EConfig) Validate() error {
 		}
 	}
 	return nil
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
 
 // GetIntervals returns the intervals to be applied to a Eventually operation.

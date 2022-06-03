@@ -51,6 +51,8 @@ var (
 
 	// TestBedCluster the cluster to be used for the e2e tests.
 	TestBedCluster clustersetup.ClusterProvider
+
+	ClusterProxy framework.ClusterProxy
 )
 
 func init() {
@@ -75,7 +77,12 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	e2eConfig = loadE2EConfig(configPath)
 
 	By("Setting up the bootstrap cluster")
-	TestBedCluster = setupBootstrapCluster(e2eConfig)
+	TestBedCluster, ClusterProxy = setupBootstrapCluster(e2eConfig)
+
+	By("Install dependence")
+	installDependency(e2eConfig, ClusterProxy)
+
+	By("Create Node pool")
 
 	return nil
 }, func(data []byte) {
@@ -112,7 +119,7 @@ func loadE2EConfig(configPath string) *framework.E2EConfig {
 	return config
 }
 
-func setupBootstrapCluster(config *framework.E2EConfig) clustersetup.ClusterProvider {
+func setupBootstrapCluster(config *framework.E2EConfig) (clustersetup.ClusterProvider, framework.ClusterProxy) {
 	var cluster clustersetup.ClusterProvider
 
 	cluster = clustersetup.CreateKindClusterAndLoadImages(ctx, clustersetup.CreateKindClusterAndLoadImagesInput{
@@ -127,5 +134,14 @@ func setupBootstrapCluster(config *framework.E2EConfig) clustersetup.ClusterProv
 	kubeconfigPath := cluster.GetKubeconfigPath()
 	Expect(kubeconfigPath).To(BeAnExistingFile(), "Failed to get the kubeconfig file for the bootstrap cluster")
 
-	return cluster
+	clusterProxy := framework.NewClusterProxy(kubeconfigPath)
+	Expect(clusterProxy).NotTo(BeNil(), "Failed to get a testbed cluster proxy")
+
+	return cluster, clusterProxy
+}
+
+func installDependency(config *framework.E2EConfig, testbed framework.ClusterProxy) {
+	for _, dep := range config.Dependences {
+		testbed.Apply(ctx, dep.Url)
+	}
 }

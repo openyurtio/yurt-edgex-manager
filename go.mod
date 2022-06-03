@@ -16,10 +16,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	k8s.io/api v0.24.1
+	k8s.io/apiextensions-apiserver v0.24.0
 	k8s.io/apimachinery v0.24.1
 	k8s.io/client-go v0.24.1
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/cluster-api v1.1.3
+	sigs.k8s.io/cluster-api/test/framework v0.0.0-20200304170348-97097699f713
 	sigs.k8s.io/controller-runtime v0.12.1
 	sigs.k8s.io/kind v0.14.0
 	sigs.k8s.io/yaml v1.3.0
