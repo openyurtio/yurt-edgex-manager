@@ -2,15 +2,11 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - release-*
   pull_request: {}
-  workflow_dispatch: {}
 
 env:
   # Common versions
-  GO_VERSION: '1.16'
+  GO_VERSION: '1.18'
   GOLANGCI_VERSION: 'v1.45'
 
 jobs:

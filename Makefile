@@ -6,6 +6,7 @@ TAG ?= v0.2.0
 
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
 
+TEST_DIR := test
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,generateEmbeddedObjectMeta=true"
 
@@ -60,6 +61,13 @@ test: manifests generate fmt vet ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+test-file: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default >test/e2e/yurt-edgex-manager.yaml
+
+.PHONY: test-e2e
+test-e2e: docker-build test-file ## Run the e2e tests
+	$(MAKE) -C $(TEST_DIR)/e2e run
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
@@ -69,7 +77,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker buildx build -t ${IMG} .
+	docker buildx build -t ${IMG} . --load
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
