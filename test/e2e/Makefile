@@ -34,7 +34,7 @@ help:  ## Display this help
 ## Binaries
 ## --------------------------------------
 
-TOOLS_DIR := $(REPO_ROOT)/hack/tools
+TOOLS_DIR := $(REPO_ROOT)/test/tools
 BIN_DIR := bin
 TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo

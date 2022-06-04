@@ -1,14 +1,16 @@
 ---
-#images:
+images:
 # Use local dev images built source tree;
-#- "gcr.io/k8s-staging-cluster-api/cluster-api-controller-amd64:dev"
-
+#- "openyurt/yurt-app-manager:v0.5.0"
+- "openyurt/yurt-edgex-manager:v0.2.0"
+#- "openyurt/kube-rbac-proxy:v0.8.0"
 
 dependences:
 
 - name: yurt-app-manager
   url: "https://raw.githubusercontent.com/openyurtio/yurt-app-manager/v0.5.0/config/setup/all_in_one.yaml"
-
+- name: yurt-edgex-manager
+  url: "./yurt-edgex-manager.yaml"
 
 variables:
   # Default variables for the e2e test; those values could be overridden via env variables, thus
@@ -19,9 +21,6 @@ variables:
   IP_FAMILY: "IPv4"
 
 intervals:
-  default/wait-cluster: ["5m", "10s"]
-  default/wait-control-plane: ["10m", "10s"]
-  default/wait-worker-nodes: ["5m", "10s"]
-  default/wait-delete-cluster: ["3m", "10s"]
-  default/wait-nodes-ready: ["10m", "10s"]
-  node-drain/wait-deployment-available: ["3m", "10s"]
+  default/wait-dependency: ["1m", "10s"]
+  default/create-nodepool: ["30s", "5s"]
+  default/create-edgex: ["1m", "10s"]

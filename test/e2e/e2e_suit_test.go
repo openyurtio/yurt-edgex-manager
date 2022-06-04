@@ -25,8 +25,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
 	"github.com/openyurtio/yurt-edgex-manager/test/framework"
 	"github.com/openyurtio/yurt-edgex-manager/test/framework/clustersetup"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -83,6 +87,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	installDependency(e2eConfig, ClusterProxy)
 
 	By("Create Node pool")
+	createNodepool(e2eConfig, ClusterProxy)
 
 	return nil
 }, func(data []byte) {
@@ -143,5 +148,64 @@ func setupBootstrapCluster(config *framework.E2EConfig) (clustersetup.ClusterPro
 func installDependency(config *framework.E2EConfig, testbed framework.ClusterProxy) {
 	for _, dep := range config.Dependences {
 		testbed.Apply(ctx, dep.Url)
+	}
+	deployment := &appsv1.Deployment{}
+	Eventually(func() bool {
+		key := client.ObjectKey{
+			Namespace: "kube-system",
+			Name:      "yurt-app-manager",
+		}
+		if err := testbed.GetClient().Get(ctx, key, deployment); err != nil {
+			return false
+		}
+		for _, c := range deployment.Status.Conditions {
+			if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, config.GetIntervals("default", "wait-dependency")...).Should(BeTrue(), func() string { return "yurt-app-manager Dependency deloyment fail" })
+
+	Eventually(func() bool {
+		key := client.ObjectKey{
+			Namespace: "edgex-system",
+			Name:      "edgex-controller-manager",
+		}
+		if err := testbed.GetClient().Get(ctx, key, deployment); err != nil {
+			return false
+		}
+		for _, c := range deployment.Status.Conditions {
+			if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, config.GetIntervals("default", "wait-dependency")...).Should(BeTrue(), func() string { return "edgex-controller-manager deloyment fail" })
+}
+
+func createNodepool(config *framework.E2EConfig, testbed framework.ClusterProxy) {
+	var nodepool [2]unitv1alpha1.NodePool
+
+	nodepool[0].ObjectMeta.Name = "beijing"
+	nodepool[0].Spec.Type = "Cloud"
+	nodepool[1].ObjectMeta.Name = "hangzhou"
+	nodepool[1].Spec.Type = "Cloud"
+	Expect(testbed.GetClient().Create(ctx, &nodepool[0])).To(BeNil(), "Failt to create Beijing Nodepool")
+	Expect(testbed.GetClient().Create(ctx, &nodepool[1])).To(BeNil(), "Failt to create Hanzhou Nodepool")
+
+	for i := range nodepool {
+		Eventually(func() bool {
+			key := client.ObjectKey{
+				Name: nodepool[i].ObjectMeta.Name,
+			}
+			if err := testbed.GetClient().Get(ctx, key, &nodepool[i]); err != nil {
+				return false
+			}
+			if nodepool[i].Status.ReadyNodeNum == 1 {
+				return true
+			}
+
+			return false
+		}, config.GetIntervals("default", "create-nodepool")...).Should(BeTrue(), func() string { return nodepool[i].ObjectMeta.Name + " create fail " })
 	}
 }
