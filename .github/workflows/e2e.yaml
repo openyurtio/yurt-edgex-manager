@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 jobs:
-  e2e-pr-blocking:
+  e2e-test:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -15,7 +15,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16
+        go-version: 1.18
 
     - name: Install ginkgo
       run: sudo apt-get install golang-ginkgo-dev
