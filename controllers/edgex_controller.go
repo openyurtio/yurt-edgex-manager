@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"time"
 
-	devicev1alpha1 "github.com/lwmqwer/EdgeX/api/v1alpha1"
 	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
