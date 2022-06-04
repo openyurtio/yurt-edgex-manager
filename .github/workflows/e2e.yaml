@@ -1,6 +1,7 @@
 name: e2e-suite
 
 on:
+  push:
   pull_request:
     branches: [ main ]
 
