@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: beijing
+---
+apiVersion: device.openyurt.io/v1alpha1
+kind: EdgeX
+metadata:
+  name: edgex-sample-beijing
+  namespace: "beijing"
+spec:
+  version: jakarta
+  poolname: beijing
+  additinalservices:
+  - metadata:
+      name: edgex-device-virtual
+    spec:
+      selector:
+        app: edgex-device-virtual
+      ports:
+      - name: http
+        port: 59900
+        protocol: TCP
+        targetPort: 59900
+  additinaldeployments:
+  - metadata:
+      name: edgex-device-virtual
+    spec:
+      selector:
+        matchLabels:
+          app: edgex-device-virtual
+      template:
+        metadata:
+          labels:
+            app: edgex-device-virtual
+        spec:
+          hostname: edgex-device-virtual
+          containers:
+          - name: edgex-device-virtual
+            image: edgexfoundry/device-virtual:2.1.0
+            imagePullPolicy: IfNotPresent
+            ports:
+            - name: http
+              protocol: TCP
+              containerPort: 59900
+            envFrom:
+            - configMapRef:
+                name: common-variables
+            env:
+              - name: Service_Host
+                value: "edgex-device-virtual"

@@ -21,7 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
@@ -41,23 +40,14 @@ var _ = Describe("When create virtual device [PR-Blocking]", func() {
 		Expect(ClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
 	})
 
-	It("Create a virtual device", func() {
-		edgex := devicev1alpha1.EdgeX{
-			ObjectMeta: v1.ObjectMeta{
-				Namespace: "default",
-				Name:      "edgex-sample-hangzhou",
-			},
-			Spec: devicev1alpha1.EdgeXSpec{
-				Version:  "hanoi",
-				PoolName: "hangzhou",
-			},
-		}
-		Expect(ClusterProxy.GetClient().Create(ctx, &edgex)).To(BeNil(), "Failt to create EdgeX")
+	It("Create a hanoi edgex in hangzhou", func() {
+		ClusterProxy.Apply(ctx, "./data/hangzhou.yaml")
 
+		edgex := devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
-				Namespace: "default",
-				Name:      edgex.Name,
+				Namespace: "hangzhou",
+				Name:      "edgex-sample-hangzhou",
 			}
 			if err := ClusterProxy.GetClient().Get(ctx, key, &edgex); err != nil {
 				return false
@@ -67,5 +57,25 @@ var _ = Describe("When create virtual device [PR-Blocking]", func() {
 			}
 			return false
 		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeTrue(), func() string { return "Edgex hangzhou not ready" })
+
+	})
+
+	It("Create a jakarta edgex in beijing", func() {
+		ClusterProxy.Apply(ctx, "./data/beijing.yaml")
+
+		edgex := devicev1alpha1.EdgeX{}
+		Eventually(func() bool {
+			key := client.ObjectKey{
+				Namespace: "beijing",
+				Name:      "edgex-sample-beijing",
+			}
+			if err := ClusterProxy.GetClient().Get(ctx, key, &edgex); err != nil {
+				return false
+			}
+			if edgex.Status.Ready == true {
+				return true
+			}
+			return false
+		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeTrue(), func() string { return "Edgex beijing not ready" })
 	})
 })
