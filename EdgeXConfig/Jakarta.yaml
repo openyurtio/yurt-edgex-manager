@@ -13,6 +13,7 @@ configmap:
     CLIENTS_CORE_METADATA_HOST: edgex-core-metadata
     REGISTRY_HOST: edgex-core-consul
     EDGEX_SECURITY_SECRET_STORE: "false"
+    SERVICE_SERVERBINDADDR: "0.0.0.0"
 services:
 - metadata:
     name: edgex-core-consul
