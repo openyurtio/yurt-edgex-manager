@@ -40,7 +40,8 @@ jobs:
         run: find  ./* -name  "*"  | xargs misspell -error
       - name: Lint markdown files
         run: find  ./ -name  "*.md" | grep -v enhancements |  grep -v .github |  xargs mdl -r ~MD010,~MD013,~MD014,~MD022,~MD024,~MD029,~MD031,~MD032,~MD033,~MD034,~MD036
-  build-binaries:
+
+  UnitTest:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -58,5 +59,13 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-go-
+      - name: Run test
+        run: make test
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: cover.out
+          verbose: true
       - name: Build All Binaries
         run: make build

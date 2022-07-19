@@ -1,5 +1,15 @@
 # Yurt-edgex-manager
 
+<div align="center">
+
+<img src="https://github.com/openyurtio/openyurt/blob/master/docs/img/OpenYurt.png" width="400" height="94"><br/>
+
+[![Version](https://img.shields.io/badge/YurtEdgexManager-v0.2.0-orange)]
+[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Go Report Card](https://goreportcard.com/badge/github.com/openyurtio/yurt-edgex-manager)](https://goreportcard.com/report/github.com/openyurtio/yurt-edgex-manager)
+[![codecov](https://codecov.io/gh/openyurtio/yurt-edgex-manger/branch/main/graph/badge.svg)](https://codecov.io/gh/openyurtio/yurt-edgex-manager)
+</div>
+
 ## ✨ What is yurt-edgex-manager
 
 Yurt-edgex-manager is an OpenYurt component for EdgeX management.
