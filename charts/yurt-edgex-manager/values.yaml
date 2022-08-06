@@ -32,8 +32,8 @@ admissionWebhooks:
   patch:
     enabled: true
     image:
-      repository: jettech/kube-webhook-certgen
-      tag: v1.5.2
+      repository: oamdev/kube-webhook-certgen
+      tag: v2.4.1
       pullPolicy: IfNotPresent
     affinity: {}
     tolerations: []
