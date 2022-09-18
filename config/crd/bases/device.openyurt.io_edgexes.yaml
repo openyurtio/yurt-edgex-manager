@@ -59,7 +59,7 @@ spec:
           spec:
             description: EdgeXSpec defines the desired state of EdgeX
             properties:
-              additinaldeployments:
+              additionalDeployments:
                 items:
                   description: DeploymentTemplateSpec defines the pool template of
                     Deployment.
@@ -8380,7 +8380,7 @@ spec:
                   - spec
                   type: object
                 type: array
-              additinalservices:
+              additionalServices:
                 items:
                   description: DeploymentTemplateSpec defines the pool template of
                     Deployment.
@@ -8739,11 +8739,11 @@ spec:
                   - spec
                   type: object
                 type: array
-              imageregistry:
+              imageRegistry:
                 type: string
-              poolname:
+              poolName:
                 type: string
-              servicetype:
+              serviceType:
                 description: Service Type string describes ingress methods for a service
                 type: string
               version:
@@ -8797,20 +8797,20 @@ spec:
                   - type
                   type: object
                 type: array
-              deploymentreadyreplicas:
+              deploymentReadyReplicas:
                 format: int32
                 type: integer
-              deploymentreplicas:
+              deploymentReplicas:
                 format: int32
                 type: integer
               initialized:
                 type: boolean
               ready:
                 type: boolean
-              servicereadyreplicas:
+              serviceReadyReplicas:
                 format: int32
                 type: integer
-              servicereplicas:
+              serviceReplicas:
                 format: int32
                 type: integer
             type: object

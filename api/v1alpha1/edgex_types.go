@@ -47,16 +47,16 @@ type ServiceTemplateSpec struct {
 type EdgeXSpec struct {
 	Version string `json:"version,omitempty"`
 
-	ImageRegistry string `json:"imageregistry,omitempty"`
+	ImageRegistry string `json:"imageRegistry,omitempty"`
 
-	PoolName string `json:"poolname,omitempty"`
+	PoolName string `json:"poolName,omitempty"`
 
-	ServiceType corev1.ServiceType `json:"servicetype,omitempty"`
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
 	// +optional
-	AdditionalService []ServiceTemplateSpec `json:"additinalservices,omitempty"`
+	AdditionalService []ServiceTemplateSpec `json:"additionalServices,omitempty"`
 
 	// +optional
-	AdditionalDeployment []DeploymentTemplateSpec `json:"additinaldeployments,omitempty"`
+	AdditionalDeployment []DeploymentTemplateSpec `json:"additionalDeployments,omitempty"`
 }
 
 // EdgeXStatus defines the observed state of EdgeX
@@ -66,13 +66,13 @@ type EdgeXStatus struct {
 	// +optional
 	Initialized bool `json:"initialized,omitempty"`
 	// +optional
-	ServiceReplicas int32 `json:"servicereplicas,omitempty"`
+	ServiceReplicas int32 `json:"serviceReplicas,omitempty"`
 	// +optional
-	ServiceReadyReplicas int32 `json:"servicereadyreplicas,omitempty"`
+	ServiceReadyReplicas int32 `json:"serviceReadyReplicas,omitempty"`
 	// +optional
-	DeploymentReplicas int32 `json:"deploymentreplicas,omitempty"`
+	DeploymentReplicas int32 `json:"deploymentReplicas,omitempty"`
 	// +optional
-	DeploymentReadyReplicas int32 `json:"deploymentreadyreplicas,omitempty"`
+	DeploymentReadyReplicas int32 `json:"deploymentReadyReplicas,omitempty"`
 
 	// Current Edgex state
 	// +optional
