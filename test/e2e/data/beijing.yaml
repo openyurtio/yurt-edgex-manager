@@ -10,8 +10,8 @@ metadata:
   namespace: "beijing"
 spec:
   version: jakarta
-  poolname: beijing
-  additinalservices:
+  poolName: beijing
+  additionalServices:
   - metadata:
       name: edgex-device-virtual
     spec:
@@ -22,7 +22,7 @@ spec:
         port: 59900
         protocol: TCP
         targetPort: 59900
-  additinaldeployments:
+  additionalDeployments:
   - metadata:
       name: edgex-device-virtual
     spec:

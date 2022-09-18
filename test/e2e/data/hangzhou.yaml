@@ -10,8 +10,8 @@ metadata:
   namespace: "hangzhou"
 spec:
   version: hanoi
-  poolname: hangzhou
-  additinalservices:
+  poolName: hangzhou
+  additionalServices:
   - metadata:
       name: edgex-device-virtual
     spec:
@@ -22,7 +22,7 @@ spec:
         port: 49990
         protocol: TCP
         targetPort: 49990
-  additinaldeployments:
+  additionalDeployments:
   - metadata:
       name: edgex-device-virtual
     spec:
