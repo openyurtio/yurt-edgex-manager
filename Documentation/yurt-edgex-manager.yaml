@@ -33,15 +33,15 @@ spec:
       name: Service
       type: integer
     - description: The Ready Service Replica.
-      jsonPath: .status.servicereadyreplicas
+      jsonPath: .status.serviceReadyReplicas
       name: ReadyService
       type: integer
     - description: The Deployment Replica.
-      jsonPath: .status.deploymentreplicas
+      jsonPath: .status.deploymentReplicas
       name: Deployment
       type: integer
     - description: The Ready Deployment Replica.
-      jsonPath: .status.deploymentreadyreplicas
+      jsonPath: .status.deploymentReadyReplicas
       name: ReadyDeployment
       type: integer
     name: v1alpha1
@@ -64,7 +64,7 @@ spec:
           spec:
             description: EdgeXSpec defines the desired state of EdgeX
             properties:
-              additinaldeployments:
+              additinalDeployments:
                 items:
                   description: DeploymentTemplateSpec defines the pool template of
                     Deployment.
@@ -7893,7 +7893,7 @@ spec:
                   - spec
                   type: object
                 type: array
-              additinalservices:
+              additinalServices:
                 items:
                   description: DeploymentTemplateSpec defines the pool template of
                     Deployment.
@@ -8275,11 +8275,11 @@ spec:
                   - spec
                   type: object
                 type: array
-              imageregistry:
+              imageRegistry:
                 type: string
-              poolname:
+              poolName:
                 type: string
-              servicetype:
+              serviceType:
                 description: Service Type string describes ingress methods for a service
                 type: string
               version:
@@ -8332,20 +8332,20 @@ spec:
                   - type
                   type: object
                 type: array
-              deploymentreadyreplicas:
+              deploymentReadyReplicas:
                 format: int32
                 type: integer
-              deploymentreplicas:
+              deploymentReplicas:
                 format: int32
                 type: integer
               initialized:
                 type: boolean
               ready:
                 type: boolean
-              servicereadyreplicas:
+              servicereadyReplicas:
                 format: int32
                 type: integer
-              servicereplicas:
+              serviceReplicas:
                 format: int32
                 type: integer
             type: object
