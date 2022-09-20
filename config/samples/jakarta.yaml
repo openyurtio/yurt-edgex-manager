@@ -4,5 +4,5 @@ metadata:
   name: edgex-sample-beijing
 spec:
   version: jakarta
-  poolname: beijing
-  imageregistry: ali
+  poolName: beijing
+  imageRegistry: ali
