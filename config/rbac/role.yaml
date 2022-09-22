@@ -9,7 +9,7 @@ rules:
 - apiGroups:
   - apps.openyurt.io
   resources:
-  - uniteddeployments
+  - yurtappsets
   verbs:
   - create
   - delete
@@ -21,7 +21,7 @@ rules:
 - apiGroups:
   - apps.openyurt.io
   resources:
-  - uniteddeployments/status
+  - yurtappsets/status
   verbs:
   - get
   - patch
