@@ -8,7 +8,7 @@ images:
 dependences:
 
 - name: yurt-app-manager
-  url: "https://raw.githubusercontent.com/openyurtio/yurt-app-manager/v0.5.0/config/setup/all_in_one.yaml"
+  url: "https://raw.githubusercontent.com/openyurtio/yurt-app-manager/v0.6.0/config/setup/all_in_one.yaml"
 - name: yurt-edgex-manager
   url: "./yurt-edgex-manager.yaml"
 
