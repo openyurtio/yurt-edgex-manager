@@ -14,7 +14,6 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/openyurtio/api v0.0.0-20220907024010-e5bfc9cc1b4b
-	github.com/openyurtio/yurt-app-manager-api v0.18.8
 	github.com/openyurtio/yurt-edgex-manager v0.0.0-00010101000000-000000000000
 	github.com/pkg/errors v0.9.1
 	k8s.io/api v0.24.1
