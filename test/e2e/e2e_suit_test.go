@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	"github.com/openyurtio/yurt-edgex-manager/test/framework"
 	"github.com/openyurtio/yurt-edgex-manager/test/framework/clustersetup"
 	appsv1 "k8s.io/api/apps/v1"
