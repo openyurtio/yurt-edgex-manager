@@ -152,7 +152,7 @@ func installDependency(config *framework.E2EConfig, testbed framework.ClusterPro
 	deployment := &appsv1.Deployment{}
 	Eventually(func() bool {
 		key := client.ObjectKey{
-			Namespace: "kube-system",
+			Namespace: "default",
 			Name:      "yurt-app-manager",
 		}
 		if err := testbed.GetClient().Get(ctx, key, deployment); err != nil {
