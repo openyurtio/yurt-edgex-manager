@@ -1,9 +1,10 @@
 ---
 images:
 # Use local dev images built source tree;
-#- "openyurt/yurt-app-manager:v0.5.0"
 - "openyurt/yurt-edgex-manager:v0.2.0"
-#- "openyurt/kube-rbac-proxy:v0.8.0"
+# - "oamdev/kube-webhook-certgen:v2.4.1"
+# - "openyurt/yurt-app-manager:latest"
+# - "openyurt/kube-rbac-proxy:v0.8.0"
 
 dependences:
 
@@ -17,7 +18,7 @@ variables:
   # allowing the same e2e config file to be re-used in different Prow jobs e.g. each one with a K8s version permutation.
   # The following Kubernetes versions should be the latest versions with already published kindest/node images.
   # This avoids building node images in the default case which improves the test duration significantly.
-  KUBERNETES_VERSION_MANAGEMENT: "v1.24.4"
+  KUBERNETES_VERSION_MANAGEMENT: "v1.24.6"
   IP_FAMILY: "IPv4"
 
 intervals:

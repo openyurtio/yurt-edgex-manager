@@ -39,7 +39,7 @@ const (
 	DefaultNodeImageRepository = "kindest/node"
 
 	// DefaultNodeImageVersion is the default Kubernetes version to be used for creating a kind cluster.
-	DefaultNodeImageVersion = "v1.24.4"
+	DefaultNodeImageVersion = "v1.24.6"
 )
 
 func Logf(format string, a ...interface{}) {
@@ -145,8 +145,8 @@ func (k *KindClusterProvider) createKindCluster() {
 	}
 
 	cfg.Nodes[0].Labels["openyurt.io/is-edge-worker"] = "false"
-	cfg.Nodes[1].Labels["openyurt.io/is-edge-worker"] = "true"
-	cfg.Nodes[2].Labels["openyurt.io/is-edge-worker"] = "true"
+	cfg.Nodes[1].Labels["openyurt.io/is-edge-worker"] = "false"
+	cfg.Nodes[2].Labels["openyurt.io/is-edge-worker"] = "false"
 	cfg.Nodes[1].Labels["apps.openyurt.io/desired-nodepool"] = "beijing"
 	cfg.Nodes[2].Labels["apps.openyurt.io/desired-nodepool"] = "hangzhou"
 
