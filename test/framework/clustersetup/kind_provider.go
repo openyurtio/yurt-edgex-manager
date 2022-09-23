@@ -145,8 +145,8 @@ func (k *KindClusterProvider) createKindCluster() {
 	}
 
 	cfg.Nodes[0].Labels["openyurt.io/is-edge-worker"] = "false"
-	cfg.Nodes[1].Labels["openyurt.io/is-edge-worker"] = "false"
-	cfg.Nodes[2].Labels["openyurt.io/is-edge-worker"] = "false"
+	cfg.Nodes[1].Labels["openyurt.io/is-edge-worker"] = "true"
+	cfg.Nodes[2].Labels["openyurt.io/is-edge-worker"] = "true"
 	cfg.Nodes[1].Labels["apps.openyurt.io/desired-nodepool"] = "beijing"
 	cfg.Nodes[2].Labels["apps.openyurt.io/desired-nodepool"] = "hangzhou"
 
