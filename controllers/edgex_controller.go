@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"time"
 
-	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -75,8 +75,8 @@ var (
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps.openyurt.io,resources=uniteddeployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.openyurt.io,resources=uniteddeployments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.openyurt.io,resources=yurtappsets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps.openyurt.io,resources=yurtappsets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=configmaps;services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=configmaps/status;services/status,verbs=get;update;patch
 
@@ -134,7 +134,7 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1alpha1.EdgeX) (ctrl.Result, error) {
 
-	ud := &unitv1alpha1.UnitedDeployment{}
+	ud := &unitv1alpha1.YurtAppSet{}
 	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
 	for _, dd := range desiredeployments {
 
@@ -351,7 +351,7 @@ NextUD:
 	for _, desireDeployment := range desiredeployments {
 		needdeployments[desireDeployment.Name] = true
 
-		ud := &unitv1alpha1.UnitedDeployment{}
+		ud := &unitv1alpha1.YurtAppSet{}
 		err := r.Get(
 			ctx,
 			types.NamespacedName{
@@ -371,14 +371,14 @@ NextUD:
 				}
 			}
 
-			ud = &unitv1alpha1.UnitedDeployment{
+			ud = &unitv1alpha1.YurtAppSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      make(map[string]string),
 					Annotations: make(map[string]string),
 					Name:        desireDeployment.Name,
 					Namespace:   edgex.Namespace,
 				},
-				Spec: unitv1alpha1.UnitedDeploymentSpec{
+				Spec: unitv1alpha1.YurtAppSetSpec{
 					Selector: desireDeployment.Spec.Selector.DeepCopy(),
 					WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
 						DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{
@@ -453,7 +453,7 @@ func (r *EdgeXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(ControlledType).
 		Watches(
-			&source.Kind{Type: &unitv1alpha1.UnitedDeployment{}},
+			&source.Kind{Type: &unitv1alpha1.YurtAppSet{}},
 			&handler.EnqueueRequestForOwner{OwnerType: ControlledType, IsController: false},
 		).
 		Watches(

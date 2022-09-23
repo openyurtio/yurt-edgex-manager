@@ -34,7 +34,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	unitv1alpha1 "github.com/openyurtio/yurt-app-manager-api/pkg/yurtappmanager/apis/apps/v1alpha1"
+	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
