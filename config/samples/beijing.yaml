@@ -4,4 +4,4 @@ metadata:
   name: edgex-sample-beijing
 spec:
   version: hanoi
-  poolname: beijing
+  poolName: beijing

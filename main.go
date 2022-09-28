@@ -22,7 +22,7 @@ import (
 	"os"
 
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
-	"github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex/validating"
+	edgexwebhook "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -139,9 +139,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EdgeX")
 		os.Exit(1)
 	}
-
+	//test the webhook
+	enableWebhook = true
 	if enableWebhook {
-		if err = (&validating.EdgeX{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&edgexwebhook.EdgeXHandler{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EdgeX")
 			os.Exit(1)
 		}
