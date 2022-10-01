@@ -139,8 +139,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EdgeX")
 		os.Exit(1)
 	}
-	//test the webhook
-	enableWebhook = true
+
 	if enableWebhook {
 		if err = (&edgexwebhook.EdgeXHandler{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EdgeX")

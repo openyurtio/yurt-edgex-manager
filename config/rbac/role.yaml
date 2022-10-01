@@ -12,6 +12,7 @@ rules:
   - nodepools
   verbs:
   - list
+  - watch
 - apiGroups:
   - apps.openyurt.io
   resources:

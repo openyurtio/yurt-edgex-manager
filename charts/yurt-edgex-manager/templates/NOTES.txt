@@ -1,0 +1,3 @@
+This application contains 1 CRD/controllers: EdgeX.
+
+The EdgeX is a set of abstractions that EdgeX Foundy deploys.

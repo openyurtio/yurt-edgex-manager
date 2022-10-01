@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -29,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
 )
@@ -43,9 +43,7 @@ func (webhook *EdgeXHandler) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-
-//+kubebuilder:rbac:groups=apps.openyurt.io,resources=nodepools,verbs=list
+//+kubebuilder:rbac:groups=apps.openyurt.io,resources=nodepools,verbs=list;watch
 
 // Cluster implements a validating and defaulting webhook for Cluster.
 type EdgeXHandler struct {
@@ -66,9 +64,11 @@ func (webhook *EdgeXHandler) Default(ctx context.Context, obj runtime.Object) er
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a EdgeX but got a %T", obj))
 	}
+	//set the default version
 	if edgex.Spec.Version == "" {
 		edgex.Spec.Version = "jakarta"
 	}
+	//set the default ServiceType
 	if edgex.Spec.ServiceType == "" {
 		edgex.Spec.ServiceType = corev1.ServiceTypeClusterIP
 	}
@@ -111,16 +111,19 @@ func (webhook *EdgeXHandler) ValidateDelete(_ context.Context, obj runtime.Objec
 	return nil
 }
 
+// validate validates a EdgeX
 func (webhook *EdgeXHandler) validate(ctx context.Context, edgex *v1alpha1.EdgeX) field.ErrorList {
+	// verify the version
 	if !(edgex.Spec.Version == "jakarta" || edgex.Spec.Version == "hanoi") {
 		return field.ErrorList{
 			field.Invalid(field.NewPath("spec", "version"), edgex.Spec.Version, "must be one of jakarta, hanoi"),
 		}
 	}
+	// verify that the poolname is a right nodepool name
 	nodePools := &unitv1alpha1.NodePoolList{}
 	if err := webhook.Client.List(ctx, nodePools); err != nil {
 		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "poolname"), edgex.Spec.PoolName, "can not list nodepools, cause"+err.Error()),
+			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "can not list nodepools, cause"+err.Error()),
 		}
 	}
 	ok := false
@@ -132,22 +135,23 @@ func (webhook *EdgeXHandler) validate(ctx context.Context, edgex *v1alpha1.EdgeX
 	}
 	if !ok {
 		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "poolname"), edgex.Spec.PoolName, "can not find the nodePool"),
+			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "can not find the nodePool"),
 		}
 	}
+	// verify that no other edgex in the nodepool
 	var edgexes v1alpha1.EdgeXList
 	listOptions := client.MatchingFields{util.IndexerPathForNodepool: edgex.Spec.PoolName}
 	if err := webhook.Client.List(ctx, &edgexes, listOptions); err != nil {
 		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "poolname"), edgex.Spec.PoolName, "can not list edgexes, cause"+err.Error()),
+			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "can not list edgexes, cause"+err.Error()),
 		}
 	}
 	if len(edgexes.Items) != 0 {
 		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "poolname"), edgex.Spec.PoolName, "already used by other edgex instance,"),
+			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "already used by other edgex instance,"),
 		}
 	}
-
+	// verify the ServiceType
 	if !(edgex.Spec.ServiceType == corev1.ServiceTypeClusterIP || edgex.Spec.ServiceType == corev1.ServiceTypeNodePort) {
 		return field.ErrorList{
 			field.Invalid(field.NewPath("spec", "serviceType"), edgex.Spec.ServiceType, "must be one of ClusterIP, NodePort"),

@@ -434,7 +434,7 @@ NextUD:
 		}
 	}
 
-	deploymentlist := &unitv1alpha1.UnitedDeploymentList{}
+	deploymentlist := &unitv1alpha1.YurtAppSetList{}
 	if err := r.List(ctx, deploymentlist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelDeployment}); err == nil {
 		for _, s := range deploymentlist.Items {
 			if _, ok := needdeployments[s.Name]; ok {
