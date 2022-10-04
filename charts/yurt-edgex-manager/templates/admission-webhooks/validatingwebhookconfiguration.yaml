@@ -17,11 +17,7 @@ webhooks:
         name: {{ template "yurtedgex.name" . }}-webhook
         namespace: {{ .Release.Namespace }}
         path: /validate-device-openyurt-io-v1alpha1-edgex
-    {{- if .Values.admissionWebhooks.patch.enabled  }}
-    failurePolicy: Ignore
-    {{- else }}
-    failurePolicy: {{ .Values.admissionWebhooks.failurePolicy }}
-    {{- end }}
+    failurePolicy: Fail
     name: vedgex.kb.io
     rules:
       - apiGroups:

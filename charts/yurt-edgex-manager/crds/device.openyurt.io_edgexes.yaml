@@ -24,19 +24,19 @@ spec:
       name: READY
       type: boolean
     - description: The Service Replica.
-      jsonPath: .status.servicereplicas
+      jsonPath: .status.serviceReplicas
       name: Service
       type: integer
     - description: The Ready Service Replica.
-      jsonPath: .status.servicereadyreplicas
+      jsonPath: .status.serviceReadyReplicas
       name: ReadyService
       type: integer
     - description: The Deployment Replica.
-      jsonPath: .status.deploymentreplicas
+      jsonPath: .status.deploymentReplicas
       name: Deployment
       type: integer
     - description: The Ready Deployment Replica.
-      jsonPath: .status.deploymentreadyreplicas
+      jsonPath: .status.deploymentReadyReplicas
       name: ReadyDeployment
       type: integer
     name: v1alpha1

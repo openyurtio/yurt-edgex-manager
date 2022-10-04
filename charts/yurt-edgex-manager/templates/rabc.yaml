@@ -50,9 +50,16 @@ metadata:
   name: {{ template "yurtedgex.name" . }}-role
 rules:
   - apiGroups:
+    - apps.openyurt.io
+    resources:
+    - nodepools
+    verbs:
+    - list
+    - watch
+  - apiGroups:
       - apps.openyurt.io
     resources:
-      - uniteddeployments
+      - yurtappsets
     verbs:
       - create
       - delete
@@ -64,7 +71,7 @@ rules:
   - apiGroups:
       - apps.openyurt.io
     resources:
-      - uniteddeployments/status
+      - yurtappsets/status
     verbs:
       - get
       - patch

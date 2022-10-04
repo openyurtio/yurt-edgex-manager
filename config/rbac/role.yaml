@@ -9,6 +9,13 @@ rules:
 - apiGroups:
   - apps.openyurt.io
   resources:
+  - nodepools
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps.openyurt.io
+  resources:
   - yurtappsets
   verbs:
   - create

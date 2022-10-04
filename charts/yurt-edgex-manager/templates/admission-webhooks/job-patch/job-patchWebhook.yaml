@@ -36,7 +36,7 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --secret-name={{ template "yurtedgex.fullname" . }}-admission
             - --patch-failure-policy={{ .Values.admissionWebhooks.failurePolicy }}
-            - --patch-mutating=false
+            - --patch-mutating=true
       restartPolicy: OnFailure
       serviceAccountName: {{ template "yurtedgex.fullname" . }}-admission
       {{- with .Values.admissionWebhooks.patch.affinity }}

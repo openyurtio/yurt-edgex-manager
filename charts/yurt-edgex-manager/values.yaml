@@ -4,7 +4,7 @@ imageRegistry: ""
 manager:
   image:
     repository: openyurt/yurt-edgex-manager
-    tag: v0.2.0
+    tag: latest
     pullPolicy: IfNotPresent
 
 rbacProxy:
