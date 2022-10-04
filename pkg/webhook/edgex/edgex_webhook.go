@@ -146,9 +146,11 @@ func (webhook *EdgeXHandler) validate(ctx context.Context, edgex *v1alpha1.EdgeX
 			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "can not list edgexes, cause"+err.Error()),
 		}
 	}
-	if len(edgexes.Items) != 0 {
-		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "already used by other edgex instance,"),
+	for _, other := range edgexes.Items {
+		if edgex.Name != other.Name {
+			return field.ErrorList{
+				field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "already used by other edgex instance,"),
+			}
 		}
 	}
 	// verify the ServiceType
