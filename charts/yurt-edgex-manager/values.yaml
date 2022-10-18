@@ -2,16 +2,12 @@
 imageRegistry: ""
 
 manager:
-  image:
-    repository: openyurt/yurt-edgex-manager
-    tag: latest
-    pullPolicy: IfNotPresent
+  image: openyurt/yurt-edgex-manager:v0.2.0
+  imagePullPolicy: IfNotPresent
 
 rbacProxy:
-  image:
-    repository: openyurt/kube-rbac-proxy
-    tag: v0.8.0
-    pullPolicy: IfNotPresent
+  image: openyurt/kube-rbac-proxy:v0.8.0
+  imagePullPolicy: IfNotPresent
 
 imagePullSecrets: []
 nameOverride: ""
