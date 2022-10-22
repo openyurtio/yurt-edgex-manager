@@ -2,7 +2,7 @@
 imageRegistry: ""
 
 manager:
-  image: yurt-edgex-manager:latest
+  image: openyurt/yurt-edgex-manager:v0.2.0
   imagePullPolicy: IfNotPresent
 
 rbacProxy:

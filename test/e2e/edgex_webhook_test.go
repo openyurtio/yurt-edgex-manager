@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe(" test webhook", func() {
+var _ = Describe("test webhook", func() {
 	var (
 		ctx      context.Context
 		specName = "edgex webhook"
@@ -142,7 +142,7 @@ var _ = Describe(" test webhook", func() {
 			return false
 		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeTrue(), func() string { return "EdgeX beijing without setting version and servicetype not ready" })
 
-		By("Create a edgex with  an already occupied nodepool")
+		By("Create a edgex with an already occupied nodepool")
 		edgex2.ObjectMeta.Name = "edgex2-webhook-beijing"
 		k8sClient.Create(ctx, edgex2)
 		res = devicev1alpha1.EdgeX{}
