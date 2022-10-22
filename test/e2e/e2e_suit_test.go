@@ -168,8 +168,8 @@ func installDependency(config *framework.E2EConfig, testbed framework.ClusterPro
 
 	Eventually(func() bool {
 		key := client.ObjectKey{
-			Namespace: "edgex-system",
-			Name:      "edgex-controller-manager",
+			Namespace: "default",
+			Name:      "yurt-edgex-manager-controller",
 		}
 		if err := testbed.GetClient().Get(ctx, key, deployment); err != nil {
 			return false

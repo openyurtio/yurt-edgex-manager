@@ -51,7 +51,7 @@ GINKGO_SKIP ?=
 GINKGO_NODES  ?= 1
 E2E_CONF_FILE  ?= ${REPO_ROOT}/test/e2e/testconfig.yaml
 ARTIFACTS ?= ${REPO_ROOT}/_artifacts
-SKIP_RESOURCE_CLEANUP ?= false
+SKIP_RESOURCE_CLEANUP ?= true
 GINKGO_NOCOLOR ?= false
 
 # to set multiple ginkgo skip flags, if any

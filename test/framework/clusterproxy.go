@@ -53,6 +53,9 @@ type ClusterProxy interface {
 
 	// Apply to apply YAML to the Kubernetes cluster, `kubectl apply`.
 	Apply(ctx context.Context, resources string, args ...string) error
+
+	// Apply to delete YAML to the Kubernetes cluster, `kubectl delete`.
+	Delete(ctx context.Context, resources string, args ...string) error
 }
 
 // clusterProxy provides a base implementation of the ClusterProxy interface.
@@ -129,6 +132,14 @@ func (p *clusterProxy) Apply(ctx context.Context, resources string, args ...stri
 	return KubectlApply(ctx, p.kubeconfigPath, resources, args...)
 }
 
+// Delete wraps `kubectl delete ...` and prints the output so we can see what deletes applied to the cluster.
+func (p *clusterProxy) Delete(ctx context.Context, resources string, args ...string) error {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for Delete")
+	Expect(resources).NotTo(BeNil(), "resources is required for Delete")
+
+	return KubectlDelete(ctx, p.kubeconfigPath, resources, args...)
+}
+
 func KubectlApply(ctx context.Context, kubeconfigPath string, resources string, args ...string) error {
 	aargs := append([]string{"apply", "--kubeconfig", kubeconfigPath, "-f", resources}, args...)
 	applyCmd := exec.NewCommand(
@@ -136,6 +147,21 @@ func KubectlApply(ctx context.Context, kubeconfigPath string, resources string, 
 		exec.WithArgs(aargs...),
 	)
 	stdout, stderr, err := applyCmd.Run(ctx)
+	if err != nil {
+		fmt.Println(string(stderr))
+		return err
+	}
+	fmt.Println(string(stdout))
+	return nil
+}
+
+func KubectlDelete(ctx context.Context, kubeconfigPath string, resources string, args ...string) error {
+	aargs := append([]string{"delete", "--kubeconfig", kubeconfigPath, "-f", resources}, args...)
+	deleteCmd := exec.NewCommand(
+		exec.WithCommand("kubectl"),
+		exec.WithArgs(aargs...),
+	)
+	stdout, stderr, err := deleteCmd.Run(ctx)
 	if err != nil {
 		fmt.Println(string(stderr))
 		return err
