@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"context"
+	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,6 +36,7 @@ var _ = Describe("test webhook", func() {
 		edgexes   = &devicev1alpha1.EdgeXList{}
 		edgex     *devicev1alpha1.EdgeX
 		k8sClient client.Client
+		mutex     sync.Mutex
 	)
 
 	BeforeEach(func() {
@@ -136,6 +138,8 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
+				mutex.Lock()
+				defer mutex.Unlock()
 				edgexes.Items = append(edgexes.Items, *edgex)
 				return true
 			}
@@ -155,6 +159,8 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
+				mutex.Lock()
+				defer mutex.Unlock()
 				edgexes.Items = append(edgexes.Items, *edgex2)
 				return true
 			}
@@ -175,6 +181,8 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
+				mutex.Lock()
+				defer mutex.Unlock()
 				edgexes.Items = append(edgexes.Items, *edgex3)
 				return true
 			}
