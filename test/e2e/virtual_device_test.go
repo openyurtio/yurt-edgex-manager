@@ -46,7 +46,6 @@ var _ = Describe("When create virtual device [PR-Blocking]", func() {
 		By("after a virtual device test, clean up previous resources")
 		if path != "" {
 			ClusterProxy.Delete(ctx, path)
-			//time.Sleep(time.Minute)
 		}
 
 	})

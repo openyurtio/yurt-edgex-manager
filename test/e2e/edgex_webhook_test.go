@@ -17,30 +17,28 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
-	"sync"
+	// 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	// 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("test webhook", func() {
 	var (
-		ctx      context.Context
+		//ctx      = context.Background()
 		specName = "edgex webhook"
 
-		edgexes   = &devicev1alpha1.EdgeXList{}
-		edgex     *devicev1alpha1.EdgeX
-		k8sClient client.Client
-		mutex     sync.Mutex
+		edgex *devicev1alpha1.EdgeX
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
 		Expect(e2eConfig).NotTo(BeNil(), "Invalid argument. e2eConfig can't be nil when calling %s spec", specName)
 		Expect(ClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
@@ -53,18 +51,17 @@ var _ = Describe("test webhook", func() {
 				PoolName: "beijing",
 			},
 		}
-		k8sClient = ClusterProxy.GetClient()
 	})
 
 	AfterEach(func() {
 		By("after a webhook test, clean up previous resources")
-		cleanupEdgex(ctx, ClusterProxy.GetClient(), edgexes)
+		cleanupEdgex(ctx, ClusterProxy.GetClient())
 	})
 
 	It("Create a edgex in beijing with wrong version", func() {
 		edgex.ObjectMeta.Name += "-version"
 		edgex.Spec.Version = "test"
-		k8sClient.Create(ctx, edgex)
+		ClusterProxy.GetClient().Create(ctx, edgex)
 		res := devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
@@ -75,7 +72,6 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgex)
 				return true
 			}
 			return false
@@ -85,7 +81,7 @@ var _ = Describe("test webhook", func() {
 	It("Create a edgex in beijing with wrong servicetype", func() {
 		edgex.ObjectMeta.Name += "-servicetype"
 		edgex.Spec.ServiceType = "test"
-		k8sClient.Create(ctx, edgex)
+		ClusterProxy.GetClient().Create(ctx, edgex)
 		res := devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
@@ -96,7 +92,6 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgex)
 				return true
 			}
 			return false
@@ -106,7 +101,7 @@ var _ = Describe("test webhook", func() {
 	It("Create a edgex in beijing with wrong poolname", func() {
 		edgex.ObjectMeta.Name += "-poolname"
 		edgex.Spec.PoolName = "shanghai"
-		k8sClient.Create(ctx, edgex)
+		ClusterProxy.GetClient().Create(ctx, edgex)
 		res := devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
@@ -117,7 +112,6 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgex)
 				return true
 			}
 			return false
@@ -125,10 +119,10 @@ var _ = Describe("test webhook", func() {
 	})
 
 	It("Create a edgex without setting version and servicetype", func() {
-		edgex2 := edgex.DeepCopy()
-		edgex3 := edgex.DeepCopy()
-		k8sClient.Create(ctx, edgex)
-		res := devicev1alpha1.EdgeX{}
+		edgex2, edgex3 := edgex.DeepCopy(), edgex.DeepCopy()
+		ClusterProxy.GetClient().Create(ctx, edgex)
+		//res := devicev1alpha1.EdgeX{}
+		res, res2, res3 := devicev1alpha1.EdgeX{}, devicev1alpha1.EdgeX{}, devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
 				Namespace: "default",
@@ -138,9 +132,6 @@ var _ = Describe("test webhook", func() {
 				return false
 			}
 			if res.Status.Ready == true {
-				mutex.Lock()
-				defer mutex.Unlock()
-				edgexes.Items = append(edgexes.Items, *edgex)
 				return true
 			}
 			return false
@@ -148,20 +139,17 @@ var _ = Describe("test webhook", func() {
 
 		By("Create a edgex with an already occupied nodepool")
 		edgex2.ObjectMeta.Name = "edgex2-webhook-beijing"
-		k8sClient.Create(ctx, edgex2)
+		ClusterProxy.GetClient().Create(ctx, edgex2)
 		res = devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
 				Namespace: "default",
 				Name:      "edgex2-webhook-beijing",
 			}
-			if err := ClusterProxy.GetClient().Get(ctx, key, &res); err != nil {
+			if err := ClusterProxy.GetClient().Get(ctx, key, &res2); err != nil {
 				return false
 			}
-			if res.Status.Ready == true {
-				mutex.Lock()
-				defer mutex.Unlock()
-				edgexes.Items = append(edgexes.Items, *edgex2)
+			if res2.Status.Ready == true {
 				return true
 			}
 			return false
@@ -170,20 +158,17 @@ var _ = Describe("test webhook", func() {
 		By("Create a edgex in hangzhou")
 		edgex3.ObjectMeta.Name = "edgex-webhook-hangzhou"
 		edgex3.Spec.PoolName = "hangzhou"
-		k8sClient.Create(ctx, edgex3)
+		ClusterProxy.GetClient().Create(ctx, edgex3)
 		res = devicev1alpha1.EdgeX{}
 		Eventually(func() bool {
 			key := client.ObjectKey{
 				Namespace: "default",
 				Name:      "edgex-webhook-hangzhou",
 			}
-			if err := ClusterProxy.GetClient().Get(ctx, key, &res); err != nil {
+			if err := ClusterProxy.GetClient().Get(ctx, key, &res3); err != nil {
 				return false
 			}
-			if res.Status.Ready == true {
-				mutex.Lock()
-				defer mutex.Unlock()
-				edgexes.Items = append(edgexes.Items, *edgex3)
+			if res3.Status.Ready == true {
 				return true
 			}
 			return false
@@ -192,9 +177,13 @@ var _ = Describe("test webhook", func() {
 	})
 })
 
-func cleanupEdgex(ctx context.Context, k8sClient client.Client, edgexes *devicev1alpha1.EdgeXList) error {
+func cleanupEdgex(ctx context.Context, k8sClient client.Client) error {
+	edgexes := &devicev1alpha1.EdgeXList{}
+	if err := ClusterProxy.GetClient().List(ctx, edgexes); err != nil {
+		return err
+	}
 	for _, item := range edgexes.Items {
-		if err := k8sClient.Delete(ctx, &item); err != nil {
+		if err := ClusterProxy.GetClient().Delete(ctx, &item); err != nil {
 			return err
 		}
 	}
