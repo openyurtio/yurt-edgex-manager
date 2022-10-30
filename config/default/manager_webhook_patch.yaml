@@ -8,6 +8,8 @@ spec:
     spec:
       containers:
       - name: manager
+        args:
+        - "--enable-webhook=true"
         ports:
         - containerPort: 9443
           name: webhook-server
@@ -20,4 +22,4 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: webhook-server-cert
+          secretName: edgex-webhook-certs

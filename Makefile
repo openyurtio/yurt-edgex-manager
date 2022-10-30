@@ -1,10 +1,9 @@
 # Image URL to use all building/pushing image targets
 # Define registries
-STAGING_REGISTRY ?= openyurt
 IMAGE_NAME ?= yurt-edgex-manager
-TAG ?= v0.2.0
+TAG ?= latest
 
-IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
+IMG ?= ${IMAGE_NAME}:${TAG}
 
 TEST_DIR := test
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
