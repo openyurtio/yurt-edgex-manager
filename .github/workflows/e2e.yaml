@@ -27,4 +27,4 @@ jobs:
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
     - name: Run PR-Blocking e2e tests
-      run: make test-e2e IMG=yurt-edgex-manager
+      run: make test-e2e
