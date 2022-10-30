@@ -1,9 +1,10 @@
 # Image URL to use all building/pushing image targets
 # Define registries
+STAGING_REGISTRY ?= openyurt
 IMAGE_NAME ?= yurt-edgex-manager
 TAG ?= latest
 
-IMG ?= ${IMAGE_NAME}:${TAG}
+IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
 
 TEST_DIR := test
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -65,7 +66,7 @@ test-file: manifests kustomize ## Deploy controller to the K8s cluster specified
 	$(KUSTOMIZE) build config/default >test/e2e/yurt-edgex-manager.yaml
 
 .PHONY: test-e2e
-test-e2e: test-file ## Run the e2e tests
+test-e2e: docker-build test-file ## Run the e2e tests
 	$(MAKE) -C $(TEST_DIR)/e2e run
 ##@ Build
 
