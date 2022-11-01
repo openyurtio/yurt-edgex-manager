@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name:  controller-manager-admission-patch-validating
+  namespace: system
+spec:
+  template:
+    metadata:
+      name:  edgex-controller-manager-admission-patch-validating
+    spec:
+      containers:
+        - name: patch
+          image: oamdev/kube-webhook-certgen:v2.4.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - patch
+            - --webhook-name=edgex-validating-webhook-configuration
+            - --namespace=default
+            - --secret-name=edgex-webhook-certs
+            - --patch-failure-policy=Fail
+            - --patch-validating=true
+            - --patch-mutating=false
+      restartPolicy: OnFailure
+      serviceAccountName: edgex-webhook-certs
+      securityContext:
+        runAsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 2000

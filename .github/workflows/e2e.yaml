@@ -20,12 +20,6 @@ jobs:
     - name: Install ginkgo
       run: sudo apt-get install golang-ginkgo-dev
 
-    - name: Install curl
-      run: sudo apt-get install curl
-
-    - name: Install helm
-      run: sudo curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
     - name: Turn off swap
       run: sudo swapoff -a
 
@@ -33,4 +27,4 @@ jobs:
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
     - name: Run PR-Blocking e2e tests
-      run: make test-e2e IMG=yurt-edgex-manager
+      run: make test-e2e

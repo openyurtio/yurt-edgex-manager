@@ -1,7 +1,7 @@
 ---
 images:
 # Use local dev images built source tree;
-- "yurt-edgex-manager:latest"
+- "openyurt/yurt-edgex-manager:latest"
 # - "oamdev/kube-webhook-certgen:v2.4.1"
 # - "openyurt/yurt-app-manager:latest"
 # - "openyurt/kube-rbac-proxy:v0.8.0"
