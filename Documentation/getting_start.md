@@ -5,7 +5,7 @@ This section tells you how to deploy the yurt-edgex-manger to a cluster
 
 ### 👟 Prepare a kubernetes cluster
 To deploy or test the yurt-edgex-manager alone, we can start from a generic kubernetes cluster. i.e. you can create a cluster with 3 nodes by kind. More kind information can refer [kind usage](https://kind.sigs.k8s.io/)
-Note: the kubernetes version must < v1.21.0
+Note: the kubernetes version is already support 1.24
 ```
 vim my-cluster-multi-node.yaml
 
@@ -13,13 +13,16 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
+  image: kindest/node:v1.24.6@sha256:97e8d00bc37a7598a0b32d1fabd155a96355c49fa0d4d4790aab0f161bf31be1
 - role: worker
+  image: kindest/node:v1.24.6@sha256:97e8d00bc37a7598a0b32d1fabd155a96355c49fa0d4d4790aab0f161bf31be1
 - role: worker
+  image: kindest/node:v1.24.6@sha256:97e8d00bc37a7598a0b32d1fabd155a96355c49fa0d4d4790aab0f161bf31be1
 ```
 If you want to deploy other versions of the image, you can refer [image version](https://github.com/kubernetes-sigs/kind/releases/tag/v0.17.0).
 
 ```
-kind create cluster --config my-cluster-multi-node.yaml --name openyurt --image kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+kind create cluster --config my-cluster-multi-node.yaml --name openyurt
 ```
 
 ### 👞 Deploy yurt-app-manager
