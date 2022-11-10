@@ -57,7 +57,7 @@ or deploy your own version by:
 git clone https://github.com/openyurtio/yurt-edgex-manager
 cd yurt-edgex-manager
 make docker-build
-kind load docker-image docker.io/openyurt/yurt-edgex-manager:latest --name openyurt 
+kind load docker-image docker.io/openyurt/yurt-edgex-manager:latest --name openyurt
 make deploy
 ```
 
