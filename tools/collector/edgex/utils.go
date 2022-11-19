@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/go-logr/logr"
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -33,32 +33,32 @@ var (
 	UnifiedPort    uint
 )
 
-func getPage(logger logr.Logger, url string) (string, error) {
+func getPage(logger *logrus.Logger, url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Error(err, "Failed to send request to edgex repo")
+		logger.Errorln("Failed to send request to edgex repo:", err)
 		return "", err
 	}
 	defer resp.Body.Close()
 	pageBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error(err, "Fail to read request body")
+		logger.Errorln("Fail to read request body:", err)
 		return "", err
 	}
 	pageStr := string(pageBytes)
 	return pageStr, nil
 }
 
-func getPageWithRegex(logger logr.Logger, url, reStr string) ([]string, error) {
+func getPageWithRegex(logger *logrus.Logger, url, reStr string) ([]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Error(err, "Failed to send request to edgex repo")
+		logger.Errorln("Failed to send request to edgex repo:", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	pageBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error(err, "Fail to read request body")
+		logger.Errorln("Fail to read request body:", err)
 		return nil, err
 	}
 	pageStr := string(pageBytes)
@@ -73,7 +73,7 @@ func getPageWithRegex(logger logr.Logger, url, reStr string) ([]string, error) {
 	return results, err
 }
 
-func loadEnv(logger logr.Logger, url string) (map[string]string, error) {
+func loadEnv(logger *logrus.Logger, url string) (map[string]string, error) {
 	content, err := getPage(logger, url)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func loadEnv(logger logr.Logger, url string) (map[string]string, error) {
 
 	envs, err := godotenv.Unmarshal(content)
 	if err != nil {
-		logger.Error(err, "Fail to parse this env file")
+		logger.Errorln("Fail to parse this env file:", err)
 		return nil, err
 	}
 

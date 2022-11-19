@@ -21,24 +21,31 @@ import (
 	"io/ioutil"
 
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
-	collectLog     = ctrl.Log.WithName("collect")
+	collectLog     = logrus.New()
 	saveConfigPath = "../../EdgeXConfig/config.yaml"
+	debug          bool
 )
 
 func main() {
+	flag.BoolVar(&debug, "debug", false, "Start debug module")
 	flag.UintVar(&edgex.UnifiedPort, "unified-port", 2000, "Unify ports of the edgex component")
 
 	flag.Parse()
 
+	if debug {
+		collectLog.SetLevel(logrus.DebugLevel)
+	} else {
+		collectLog.SetLevel(logrus.InfoLevel)
+	}
+
 	err := Run()
 	if err != nil {
-		collectLog.Error(err, "Fail to collect edgex configuration")
+		collectLog.Errorln("Fail to collect edgex configuration:", err)
 		return
 	}
 }
@@ -46,10 +53,8 @@ func main() {
 // Collect the edgex configuration and write it to the yaml file
 func Run() error {
 	logger := collectLog
-	opts := zap.Options{
-		Development: true,
-	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	edgex.SetLog(logger.WithField("collect", "edgex").Logger)
 
 	versionsInfo, err := edgex.CollectVersionsInfo()
 	if err != nil {
@@ -63,13 +68,13 @@ func Run() error {
 
 	data, err := yaml.Marshal(edgeXConfig)
 	if err != nil {
-		logger.Error(err, "Fail to parse edgex config to yaml")
+		logger.Errorln("Fail to parse edgex config to yaml:", err)
 		return err
 	}
 
 	err = ioutil.WriteFile(saveConfigPath, data, 0644)
 	if err != nil {
-		logger.Error(err, "Fail to write yaml")
+		logger.Errorln("Fail to write yaml:", err)
 		return err
 	}
 
