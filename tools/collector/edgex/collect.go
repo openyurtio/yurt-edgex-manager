@@ -16,17 +16,23 @@ limitations under the License.
 
 package edgex
 
-import ctrl "sigs.k8s.io/controller-runtime"
+import (
+	"github.com/sirupsen/logrus"
+)
 
 var (
-	collectLog           = ctrl.Log.WithName("collect").WithName("edgex")
+	collectLog           *logrus.Logger
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
 )
 
+func SetLog(logger *logrus.Logger) {
+	collectLog = logger
+}
+
 func CollectVersionsInfo() ([]string, error) {
 	logger := collectLog
-	logger.Info("Collecting versions")
+	logger.Infoln("Collecting versions")
 
 	branches, err := getPageWithRegex(logger, branchesURL, extractVersionRegexp)
 	if err != nil {
@@ -38,7 +44,7 @@ func CollectVersionsInfo() ([]string, error) {
 
 func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
 	logger := collectLog
-	logger.Info("Distributing version")
+	logger.Infoln("Distributing version")
 
 	edgeXConfig := newEdgeXConfig()
 
@@ -51,10 +57,10 @@ func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
 		version := newVersion(logger, versionName)
 		err := version.catch()
 		if err != nil && err == ErrConfigFileNotFound {
-			logger.Info("The configuration file for this version could not be found", "version", versionName)
+			logger.Warningln("The configuration file for this version could not be found,", "version:", versionName)
 			continue
 		} else if err != nil && err == ErrVersionNotAdapted {
-			logger.Info("The configuration file of this version cannot be captured")
+			logger.Warningln("The configuration file of this version cannot be captured")
 			continue
 		}
 		edgeXConfig.Versions = append(edgeXConfig.Versions, *version)

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -42,15 +42,15 @@ type EdgeXConfig struct {
 }
 
 type Version struct {
-	logger     logr.Logger
+	logger     *logrus.Logger
 	Name       string            `yaml:"versionName"`
 	Env        map[string]string `yaml:"env,omitempty"`
 	Components []Component       `yaml:"components,omitempty"`
 }
 
-func newVersion(logger logr.Logger, name string) *Version {
+func newVersion(logger *logrus.Logger, name string) *Version {
 	return &Version{
-		logger:     logger.WithName(name),
+		logger:     logger.WithField("version", name).Logger,
 		Name:       name,
 		Env:        make(map[string]string),
 		Components: make([]Component, 0),
@@ -67,7 +67,7 @@ func newEdgeXConfig() *EdgeXConfig {
 
 func (v *Version) catch() error {
 	logger := v.logger
-	logger.Info("Start catching", "version name", v.Name)
+	logger.Infoln("Start catching, version name:", v.Name)
 
 	filenames, err := v.catchAllFilenames()
 	if err != nil {
@@ -75,7 +75,7 @@ func (v *Version) catch() error {
 	}
 
 	if ok := v.checkVersion(filenames); !ok {
-		logger.Info("The current version cannot be adapted", "version name", v.Name)
+		logger.Warningln("The current version cannot be adapted,", "version name:", v.Name)
 		return ErrVersionNotAdapted
 	}
 
@@ -86,7 +86,7 @@ func (v *Version) catch() error {
 
 	filename, ok := v.pickupFile(filenames)
 	if !ok {
-		logger.Info("Configuration file is not found", "version name", v.Name)
+		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
 		return ErrConfigFileNotFound
 	}
 
@@ -102,9 +102,10 @@ func (v *Version) catch() error {
 
 func (v *Version) newComponent(name, image string) *Component {
 	return &Component{
+		logger:       v.logger.WithField("component", name).Logger,
 		Name:         name,
 		Image:        image,
-		Volumes:      make([]string, 0),
+		Volumes:      []Volume{},
 		ComponentEnv: make(map[string]string),
 		IsSecurity:   true,
 		envRef:       &v.Env,
@@ -118,7 +119,7 @@ func (v *Version) addEnv() error {
 		url := rawVersionURLPrefix + v.Name + "/" + composeBuilder + "/" + file
 		envs, err := loadEnv(logger, url)
 		if err != nil {
-			logger.Error(err, "Fail to load env")
+			logger.Errorln("Fail to load env:", err)
 			return err
 		}
 
@@ -142,7 +143,7 @@ func (v *Version) catchYML(filename string) error {
 	viper.SetConfigType("yaml")
 	err = viper.ReadConfig(bytes.NewBuffer([]byte(pageStr)))
 	if err != nil {
-		logger.Error(err, "Viper read config error")
+		logger.Errorln("Viper read config error:", err)
 		return err
 	}
 
@@ -157,7 +158,7 @@ func (v *Version) catchYML(filename string) error {
 
 		image, ok := componentConfig["image"].(string)
 		if !ok {
-			logger.Info("This is not a valid component", "component", hostname)
+			logger.Infoln("This is not a valid component,", "component:", hostname)
 			continue
 		}
 
@@ -169,7 +170,7 @@ func (v *Version) catchYML(filename string) error {
 
 		volumes, ok := componentConfig["volumes"].([]interface{})
 		if ok {
-			_ = component.fillVolumes(volumes)
+			component.fillVolumes(volumes)
 		}
 
 		v.Components = append(v.Components, *component)
@@ -186,13 +187,13 @@ func (v *Version) catchAllFilenames() ([]string, error) {
 
 	results, err := getPageWithRegex(v.logger, fileSearchURL, fileMatchRegexp)
 	if err != nil {
-		logger.Error(err, "Fail to list all filename")
+		logger.Errorln("Fail to list all filename:", err)
 		return nil, err
 	}
 
 	dirResults, err := getPageWithRegex(v.logger, fileSearchURL, dirMatchRegexp)
 	if err != nil {
-		logger.Error(err, "Fail to list all directory")
+		logger.Errorln("Fail to list all directory:", err)
 		return nil, err
 	}
 	results = append(results, dirResults...)
