@@ -7,6 +7,7 @@ TAG ?= latest
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
 
 TEST_DIR := test
+TOOLS_DIR := tools
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,generateEmbeddedObjectMeta=true"
 
@@ -139,3 +140,7 @@ endif
 
 lint: install-golint ## Run go lint against code.
 	$(GOLINT_BIN) run -v
+
+.PHONY: collect
+collect: ## Run the edgex auto-collector
+	$(MAKE) -C $(TOOLS_DIR)/collector run
