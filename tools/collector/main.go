@@ -26,9 +26,10 @@ import (
 )
 
 var (
-	collectLog     = logrus.New()
-	saveConfigPath = "../../EdgeXConfig/config.yaml"
-	debug          bool
+	collectLog            = logrus.New()
+	saveSectyConfigPath   = "../../EdgeXConfig/config.yaml"
+	saveNoSectyConfigPath = "../../EdgeXConfig/config-nosecty.yaml"
+	debug                 bool
 )
 
 func main() {
@@ -61,7 +62,7 @@ func Run() error {
 		return err
 	}
 
-	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo)
+	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true)
 	if err != nil {
 		return err
 	}
@@ -72,9 +73,28 @@ func Run() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(saveConfigPath, data, 0644)
+	err = ioutil.WriteFile(saveSectyConfigPath, data, 0644)
 	if err != nil {
-		logger.Errorln("Fail to write yaml:", err)
+		logger.Errorln("Fail to write config yaml:", err)
+		return err
+	}
+
+	edgex.SetLog(logger.WithField("collect", "edgex-nosecty").Logger)
+
+	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)
+	if err != nil {
+		return err
+	}
+
+	data, err = yaml.Marshal(edgeXConfig)
+	if err != nil {
+		logger.Errorln("Fail to parse edgex-nosecty config to yaml:", err)
+		return err
+	}
+
+	err = ioutil.WriteFile(saveNoSectyConfigPath, data, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write nosecty-config yaml:", err)
 		return err
 	}
 
