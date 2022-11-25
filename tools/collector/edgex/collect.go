@@ -42,7 +42,7 @@ func CollectVersionsInfo() ([]string, error) {
 	return branches, nil
 }
 
-func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
+func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, error) {
 	logger := collectLog
 	logger.Infoln("Distributing version")
 
@@ -55,7 +55,7 @@ func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
 		}
 
 		version := newVersion(logger, versionName)
-		err := version.catch()
+		err := version.catch(isSecurity)
 		if err != nil && err == ErrConfigFileNotFound {
 			logger.Warningln("The configuration file for this version could not be found,", "version:", versionName)
 			continue
