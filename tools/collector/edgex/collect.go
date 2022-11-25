@@ -21,12 +21,12 @@ import (
 )
 
 var (
-	collectLog           *logrus.Logger
+	collectLog           *logrus.Entry
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
 )
 
-func SetLog(logger *logrus.Logger) {
+func SetLog(logger *logrus.Entry) {
 	collectLog = logger
 }
 
