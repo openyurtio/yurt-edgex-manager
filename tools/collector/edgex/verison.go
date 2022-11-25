@@ -41,15 +41,15 @@ type EdgeXConfig struct {
 }
 
 type Version struct {
-	logger     *logrus.Logger
+	logger     *logrus.Entry
 	Name       string            `yaml:"versionName"`
 	Env        map[string]string `yaml:"env,omitempty"`
 	Components []Component       `yaml:"components,omitempty"`
 }
 
-func newVersion(logger *logrus.Logger, name string) *Version {
+func newVersion(logger *logrus.Entry, name string) *Version {
 	return &Version{
-		logger:     logger.WithField("version", name).Logger,
+		logger:     logger.WithField("version", name),
 		Name:       name,
 		Env:        make(map[string]string),
 		Components: make([]Component, 0),
@@ -101,7 +101,7 @@ func (v *Version) catch(isSecurity bool) error {
 
 func (v *Version) newComponent(name, image string) *Component {
 	return &Component{
-		logger:       v.logger.WithField("component", name).Logger,
+		logger:       v.logger.WithField("component", name),
 		Name:         name,
 		Image:        image,
 		Volumes:      []Volume{},

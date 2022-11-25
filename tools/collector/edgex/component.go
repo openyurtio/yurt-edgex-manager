@@ -29,7 +29,7 @@ const (
 )
 
 type Component struct {
-	logger       *logrus.Logger
+	logger       *logrus.Entry
 	Name         string            `yaml:"name"`
 	Image        string            `yaml:"image"`
 	Volumes      []Volume          `yaml:"volumns,omitempty"`
