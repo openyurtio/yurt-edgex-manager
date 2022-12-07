@@ -3,7 +3,7 @@ name: PushImage
 on:
   push:
     branches:
-      - boo-dev
+      - master
 
 jobs:
   docker-push: 
