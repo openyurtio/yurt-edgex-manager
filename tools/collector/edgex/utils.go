@@ -33,7 +33,7 @@ var (
 	UnifiedPort    uint
 )
 
-func getPage(logger *logrus.Logger, url string) (string, error) {
+func getPage(logger *logrus.Entry, url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		logger.Errorln("Failed to send request to edgex repo:", err)
@@ -49,7 +49,7 @@ func getPage(logger *logrus.Logger, url string) (string, error) {
 	return pageStr, nil
 }
 
-func getPageWithRegex(logger *logrus.Logger, url, reStr string) ([]string, error) {
+func getPageWithRegex(logger *logrus.Entry, url, reStr string) ([]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		logger.Errorln("Failed to send request to edgex repo:", err)
@@ -73,7 +73,7 @@ func getPageWithRegex(logger *logrus.Logger, url, reStr string) ([]string, error
 	return results, err
 }
 
-func loadEnv(logger *logrus.Logger, url string) (map[string]string, error) {
+func loadEnv(logger *logrus.Entry, url string) (map[string]string, error) {
 	content, err := getPage(logger, url)
 	if err != nil {
 		return nil, err

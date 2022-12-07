@@ -18,15 +18,17 @@ package edgex
 
 import (
 	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 var (
-	collectLog           *logrus.Logger
+	collectLog           *logrus.Entry
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
+	prefixImgStr         = "openyurt/"
 )
 
-func SetLog(logger *logrus.Logger) {
+func SetLog(logger *logrus.Entry) {
 	collectLog = logger
 }
 
@@ -42,7 +44,7 @@ func CollectVersionsInfo() ([]string, error) {
 	return branches, nil
 }
 
-func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
+func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, error) {
 	logger := collectLog
 	logger.Infoln("Distributing version")
 
@@ -55,7 +57,7 @@ func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
 		}
 
 		version := newVersion(logger, versionName)
-		err := version.catch()
+		err := version.catch(isSecurity)
 		if err != nil && err == ErrConfigFileNotFound {
 			logger.Warningln("The configuration file for this version could not be found,", "version:", versionName)
 			continue
@@ -68,3 +70,73 @@ func CollectEdgeXConfig(versionsInfo []string) (*EdgeXConfig, error) {
 
 	return edgeXConfig, nil
 }
+
+//func ModifyImages(edgexConfig *EdgeXConfig) {
+//	versions := &edgexConfig.Versions
+//	for _, version := range *versions {
+//		components := &version.Components
+//		for _, component := range *components {
+//			image := component.Image
+//			if strings.Contains(image, "/") {
+//				component.Image = prefixImgStr + strings.Split(image, "/")[1]
+//			} else {
+//				component.Image = prefixImgStr + image
+//			}
+//		}
+//	}
+//}
+
+func ModifyImages(edgexConfig *EdgeXConfig) []string {
+	newImages := make([]string, 0)
+	versions := edgexConfig.Versions
+
+	for i, version := range versions {
+		components := version.Components
+		for j, component := range components {
+			image := component.Image
+			newImage := ""
+			if strings.Contains(image, "/") {
+				newImage = prefixImgStr + strings.Split(image, "/")[1]
+				edgexConfig.Versions[i].Components[j].Image = prefixImgStr + strings.Split(image, "/")[1]
+			} else {
+				newImage = prefixImgStr + image
+				edgexConfig.Versions[i].Components[j].Image = prefixImgStr + image
+			}
+			newImages = append(newImages, newImage)
+		}
+	}
+	return newImages
+}
+
+//func PushImages(images []string) {
+//	cli, err := client.NewEnvClient()
+//	if err != nil {
+//		panic(err.Error())
+//	}
+//	user := "yangbobo"
+//	password := "yb522653."
+//	authConfig := types.AuthConfig{Username: user, Password: password}
+//	encodedJSON, err := json.Marshal(authConfig)
+//	if err != nil {
+//		panic(err)
+//	}
+//	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+//
+//	var pushReader io.ReadCloser
+//	for _, image := range images {
+//		pushReader, err = cli.ImagePush(context.Background(), image, types.ImagePushOptions{
+//			All:           false,
+//			RegistryAuth:  authStr,
+//			PrivilegeFunc: nil,
+//		})
+//	}
+//	if err != nil {
+//		panic(err)
+//	}
+//	defer func(pushReader io.ReadCloser) {
+//		err := pushReader.Close()
+//		if err != nil {
+//			panic(err)
+//		}
+//	}(pushReader)
+//}

@@ -29,13 +29,11 @@ const (
 )
 
 type Component struct {
-	logger       *logrus.Logger
+	logger       *logrus.Entry
 	Name         string            `yaml:"name"`
 	Image        string            `yaml:"image"`
 	Volumes      []Volume          `yaml:"volumns,omitempty"`
 	ComponentEnv map[string]string `yaml:"componentEnv,omitempty"`
-	// TODO: We need to crawl another no-security file and mark which components are not secure
-	IsSecurity bool `yaml:"isSecurity"`
 	// A pointer to the Env of the previous level
 	envRef *map[string]string
 }

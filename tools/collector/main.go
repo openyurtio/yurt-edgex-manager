@@ -26,9 +26,12 @@ import (
 )
 
 var (
-	collectLog     = logrus.New()
-	saveConfigPath = "../../EdgeXConfig/config.yaml"
-	debug          bool
+	collectLog            = logrus.New()
+	saveSectyConfigPath   = "../../EdgeXConfig/config.yaml"
+	saveNoSectyConfigPath = "../../EdgeXConfig/config-nosecty.yaml"
+	saveSectyImgPath      = "../../EdgeXConfig/image.yaml"
+	saveNoSectyImgPath    = "../../EdgeXConfig/image-nosecty.yaml"
+	debug                 bool
 )
 
 func main() {
@@ -54,15 +57,23 @@ func main() {
 func Run() error {
 	logger := collectLog
 
-	edgex.SetLog(logger.WithField("collect", "edgex").Logger)
+	edgex.SetLog(logger.WithField("collect", "edgex"))
 
 	versionsInfo, err := edgex.CollectVersionsInfo()
 	if err != nil {
 		return err
 	}
 
-	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo)
+	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true)
 	if err != nil {
+		return err
+	}
+
+	imageSecurity := edgex.ModifyImages(edgeXConfig)
+	dataImg, err := yaml.Marshal(imageSecurity)
+	err = ioutil.WriteFile(saveSectyImgPath, dataImg, 0644)
+	if err != nil {
+		logger.Errorln("Fail to parse image to yaml:", err)
 		return err
 	}
 
@@ -72,9 +83,36 @@ func Run() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(saveConfigPath, data, 0644)
+	err = ioutil.WriteFile(saveSectyConfigPath, data, 0644)
 	if err != nil {
-		logger.Errorln("Fail to write yaml:", err)
+		logger.Errorln("Fail to write config yaml:", err)
+		return err
+	}
+
+	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
+
+	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)
+	if err != nil {
+		return err
+	}
+
+	imageNoSecty := edgex.ModifyImages(edgeXConfig)
+	dataNoSectyImg, err := yaml.Marshal(imageNoSecty)
+	err = ioutil.WriteFile(saveNoSectyImgPath, dataNoSectyImg, 0644)
+	if err != nil {
+		logger.Errorln("Fail to parse image to yaml:", err)
+		return err
+	}
+
+	data, err = yaml.Marshal(edgeXConfig)
+	if err != nil {
+		logger.Errorln("Fail to parse edgex-nosecty config to yaml:", err)
+		return err
+	}
+
+	err = ioutil.WriteFile(saveNoSectyConfigPath, data, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write nosecty-config yaml:", err)
 		return err
 	}
 
