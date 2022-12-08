@@ -12,6 +12,7 @@ run:
 
 IMG ?= yangbobo/consul:1.10.10
 
+.PHONY: docker-push-mutiarch
 docker-push-mutiarch:
 	#IMG = $(foreach image, $(FIN_IMAGES), $(image))
 	docker buildx build --platform linux/arm64,linux/amd64 -t ${IMG} . --push
