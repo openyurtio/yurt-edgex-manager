@@ -10,6 +10,8 @@ CONTENT = $(shell cat ./../../EdgeXConfig/image.yaml)
 IMAGES = $(subst - , ,$(CONTENT))
 FIN_IMAGES = $(strip $(FIN_IMAGES))
 
+IMG = yangbobo/consul:1.10.10
+
 docker-push-mutiarch:
-	IMG = $(foreach image, $(FIN_IMAGES), $(image))
+	#IMG = $(foreach image, $(FIN_IMAGES), $(image))
 	docker buildx build --platform linux/arm64,linux/amd64 -t ${IMG} . --push
