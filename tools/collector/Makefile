@@ -8,9 +8,9 @@ run:
 
 CONTENT = $(shell cat ./../../EdgeXConfig/image.yaml)
 IMAGES = $(subst - , ,$(CONTENT))
-FIN_IMAGES = $(strip $(FIN_IMAGES))
+FIN_IMAGES = $(strip $(IMAGES))
 
-IMG = yangbobo/consul:1.10.10
+IMG ?= yangbobo/consul:1.10.10
 
 docker-push-mutiarch:
 	#IMG = $(foreach image, $(FIN_IMAGES), $(image))
