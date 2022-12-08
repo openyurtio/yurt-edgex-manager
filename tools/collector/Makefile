@@ -6,9 +6,9 @@ DEBUG ?= false
 run:
 	go run main.go --debug=$(DEBUG) --unified-port=$(UNIFIED_PORT)
 
-CONTENT = $(shell cat ./../../EdgeXConfig/image.yaml)
-IMAGES = $(subst - , ,$(CONTENT))
-FIN_IMAGES = $(strip $(IMAGES))
+#CONTENT = $(shell cat ./../../EdgeXConfig/image.yaml)
+#IMAGES = $(subst - , ,$(CONTENT))
+#FIN_IMAGES = $(strip $(IMAGES))
 
 IMG ?= yangbobo/consul:1.10.10
 
