@@ -144,3 +144,7 @@ lint: install-golint ## Run go lint against code.
 .PHONY: collect
 collect: ## Run the edgex auto-collector
 	$(MAKE) -C $(TOOLS_DIR)/collector run
+
+.PHONY: sync_image
+sync_image:
+	$(MAKE) -C $(TOOLS_DIR)/collector sync_image
