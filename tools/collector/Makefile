@@ -1,3 +1,5 @@
+REPO ?= yangbobo
+
 # Unify ports of the edgex component
 UNIFIED_PORT ?= 2000
 DEBUG ?= false
@@ -6,13 +8,6 @@ DEBUG ?= false
 run:
 	go run main.go --debug=$(DEBUG) --unified-port=$(UNIFIED_PORT)
 
-#CONTENT = $(shell cat ./../../EdgeXConfig/image.yaml)
-#IMAGES = $(subst - , ,$(CONTENT))
-#FIN_IMAGES = $(strip $(IMAGES))
-
-IMG ?= yangbobo/consul:1.10.10
-
-.PHONY: docker-push-mutiarch
-docker-push-mutiarch:
-	#IMG = $(foreach image, $(FIN_IMAGES), $(image))
-	docker buildx build --platform linux/arm64,linux/amd64 -t ${IMG} . --push
+sync_image:
+	chmod +x ./hack/sync_images.sh
+	./hack/sync_images.sh $(REPO)

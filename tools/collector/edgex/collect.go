@@ -17,7 +17,9 @@ limitations under the License.
 package edgex
 
 import (
+	"bufio"
 	"github.com/sirupsen/logrus"
+	"os"
 	"strings"
 )
 
@@ -25,7 +27,9 @@ var (
 	collectLog           *logrus.Entry
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
-	prefixImgStr         = "openyurt/"
+	//prefixImgStr         = "openyurt/"
+	singleArchPath = "./config/singlearch_imagelist.txt"
+	multiArchPath  = "./config/multiarch_imagelist.txt"
 )
 
 func SetLog(logger *logrus.Entry) {
@@ -71,72 +75,47 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, e
 	return edgeXConfig, nil
 }
 
-//func ModifyImages(edgexConfig *EdgeXConfig) {
-//	versions := &edgexConfig.Versions
-//	for _, version := range *versions {
-//		components := &version.Components
-//		for _, component := range *components {
-//			image := component.Image
-//			if strings.Contains(image, "/") {
-//				component.Image = prefixImgStr + strings.Split(image, "/")[1]
-//			} else {
-//				component.Image = prefixImgStr + image
-//			}
-//		}
-//	}
-//}
+func ModifyImages(edgexConfig *EdgeXConfig) error {
+	//newImages := make([]string, 0)
+	fileSingleArch, err := os.Create(singleArchPath)
+	if err != nil {
+		return err
+	}
+	fileMutiArch, err := os.Create(multiArchPath)
+	if err != nil {
+		return err
+	}
+	defer fileSingleArch.Close()
+	defer fileMutiArch.Close()
 
-func ModifyImages(edgexConfig *EdgeXConfig) []string {
-	newImages := make([]string, 0)
+	writerSingleArch := bufio.NewWriter(fileSingleArch)
+	writerMutiArch := bufio.NewWriter(fileMutiArch)
 	versions := edgexConfig.Versions
 
-	for i, version := range versions {
+	for _, version := range versions {
 		components := version.Components
-		for j, component := range components {
+		for _, component := range components {
 			image := component.Image
-			newImage := ""
+			//newImage := ""
 			if strings.Contains(image, "/") {
-				newImage = prefixImgStr + strings.Split(image, "/")[1]
-				edgexConfig.Versions[i].Components[j].Image = prefixImgStr + strings.Split(image, "/")[1]
+				//newImage = prefixImgStr + strings.Split(image, "/")[1]
+				writerSingleArch.WriteString(image)
+				imgArr := strings.Split(image, ":")
+				imagePre := imgArr[:len(imgArr)-1]
+				imagePre[len(imagePre)-1] = imagePre[len(imagePre)-1] + "-arm64"
+				writerSingleArch.WriteString(" " + imagePre[0] + ":" + imgArr[len(imgArr)-1])
+				writerSingleArch.WriteString("\n")
+				writerSingleArch.Flush()
+				//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + strings.Split(image, "/")[1]
 			} else {
-				newImage = prefixImgStr + image
-				edgexConfig.Versions[i].Components[j].Image = prefixImgStr + image
+				writerMutiArch.WriteString(image)
+				writerMutiArch.WriteString("\n")
+				writerMutiArch.Flush()
+				//newImage = prefixImgStr + image
+				//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + image
 			}
-			newImages = append(newImages, newImage)
+			//newImages = append(newImages, newImage)
 		}
 	}
-	return newImages
+	return err
 }
-
-//func PushImages(images []string) {
-//	cli, err := client.NewEnvClient()
-//	if err != nil {
-//		panic(err.Error())
-//	}
-//	user := "yangbobo"
-//	password := "yb522653."
-//	authConfig := types.AuthConfig{Username: user, Password: password}
-//	encodedJSON, err := json.Marshal(authConfig)
-//	if err != nil {
-//		panic(err)
-//	}
-//	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
-//
-//	var pushReader io.ReadCloser
-//	for _, image := range images {
-//		pushReader, err = cli.ImagePush(context.Background(), image, types.ImagePushOptions{
-//			All:           false,
-//			RegistryAuth:  authStr,
-//			PrivilegeFunc: nil,
-//		})
-//	}
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer func(pushReader io.ReadCloser) {
-//		err := pushReader.Close()
-//		if err != nil {
-//			panic(err)
-//		}
-//	}(pushReader)
-//}

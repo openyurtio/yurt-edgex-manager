@@ -18,19 +18,18 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
-
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 )
 
 var (
 	collectLog            = logrus.New()
 	saveSectyConfigPath   = "../../EdgeXConfig/config.yaml"
 	saveNoSectyConfigPath = "../../EdgeXConfig/config-nosecty.yaml"
-	saveSectyImgPath      = "../../EdgeXConfig/image.yaml"
-	saveNoSectyImgPath    = "../../EdgeXConfig/image-nosecty.yaml"
+	singleArchPath        = "./config/singlearch_imagelist.txt"
+	multiArchPath         = "./config/multiarch_imagelist.txt"
 	debug                 bool
 )
 
@@ -69,11 +68,10 @@ func Run() error {
 		return err
 	}
 
-	imageSecurity := edgex.ModifyImages(edgeXConfig)
-	dataImg, err := yaml.Marshal(imageSecurity)
-	err = ioutil.WriteFile(saveSectyImgPath, dataImg, 0644)
+	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, true)
+
+	err = edgex.ModifyImages(edgeXConfig)
 	if err != nil {
-		logger.Errorln("Fail to parse image to yaml:", err)
 		return err
 	}
 
@@ -93,14 +91,6 @@ func Run() error {
 
 	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)
 	if err != nil {
-		return err
-	}
-
-	imageNoSecty := edgex.ModifyImages(edgeXConfig)
-	dataNoSectyImg, err := yaml.Marshal(imageNoSecty)
-	err = ioutil.WriteFile(saveNoSectyImgPath, dataNoSectyImg, 0644)
-	if err != nil {
-		logger.Errorln("Fail to parse image to yaml:", err)
 		return err
 	}
 
