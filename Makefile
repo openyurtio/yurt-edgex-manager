@@ -145,5 +145,6 @@ lint: install-golint ## Run go lint against code.
 collect: ## Run the edgex auto-collector
 	$(MAKE) -C $(TOOLS_DIR)/collector run
 	
-docker-push-mutiarch-image:
-	$(MAKE) -C $(TOOLS_DIR)/collector docker-push-mutiarch
+.PHONY: sync_image
+sync_image:
+	$(MAKE) -C $(TOOLS_DIR)/collector sync_image
