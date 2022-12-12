@@ -25,12 +25,13 @@ import (
 )
 
 var (
-	collectLog            = logrus.New()
-	saveSectyConfigPath   = "../../EdgeXConfig/config.yaml"
-	saveNoSectyConfigPath = "../../EdgeXConfig/config-nosecty.yaml"
-	singleArchPath        = "./config/singlearch_imagelist.txt"
-	multiArchPath         = "./config/multiarch_imagelist.txt"
-	debug                 bool
+	collectLog             = logrus.New()
+	saveSectyConfigPath    = "../../EdgeXConfig/config.yaml"
+	saveSectyConfigPathArm = "../../EdgeXConfig/config.yaml"
+	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.yaml"
+	singleArchPath         = "./config/singlearch_imagelist.txt"
+	multiArchPath          = "./config/multiarch_imagelist.txt"
+	debug                  bool
 )
 
 func main() {
@@ -68,9 +69,9 @@ func Run() error {
 		return err
 	}
 
-	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, true)
+	edgeXConfigArm, err := edgex.CollectEdgeXConfig1(versionsInfo, true)
 
-	err = edgex.ModifyImages(edgeXConfig)
+	err = edgex.ModifyImages(edgeXConfig, edgeXConfigArm)
 	if err != nil {
 		return err
 	}
@@ -82,6 +83,18 @@ func Run() error {
 	}
 
 	err = ioutil.WriteFile(saveSectyConfigPath, data, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write config yaml:", err)
+		return err
+	}
+
+	data, err = yaml.Marshal(edgeXConfigArm)
+	if err != nil {
+		logger.Errorln("Fail to parse edgex config to yaml:", err)
+		return err
+	}
+
+	err = ioutil.WriteFile(saveSectyConfigPathArm, data, 0644)
 	if err != nil {
 		logger.Errorln("Fail to write config yaml:", err)
 		return err

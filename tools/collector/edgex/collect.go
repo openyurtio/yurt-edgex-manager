@@ -75,7 +75,34 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, e
 	return edgeXConfig, nil
 }
 
-func ModifyImages(edgexConfig *EdgeXConfig) error {
+func CollectEdgeXConfig1(versionsInfo []string, isSecurity bool) (*EdgeXConfig, error) {
+	logger := collectLog
+	logger.Infoln("Distributing version")
+
+	edgeXConfig := newEdgeXConfig()
+
+	for _, versionName := range versionsInfo {
+		// The main branch is unstable. There is no need to synchronize the main branch
+		if versionName == "main" {
+			continue
+		}
+
+		version := newVersion(logger, versionName)
+		err := version.catch1(isSecurity)
+		if err != nil && err == ErrConfigFileNotFound {
+			logger.Warningln("The configuration file for this version could not be found,", "version:", versionName)
+			continue
+		} else if err != nil && err == ErrVersionNotAdapted {
+			logger.Warningln("The configuration file of this version cannot be captured")
+			continue
+		}
+		edgeXConfig.Versions = append(edgeXConfig.Versions, *version)
+	}
+
+	return edgeXConfig, nil
+}
+
+func ModifyImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 	//newImages := make([]string, 0)
 	fileSingleArch, err := os.Create(singleArchPath)
 	if err != nil {
@@ -91,31 +118,59 @@ func ModifyImages(edgexConfig *EdgeXConfig) error {
 	writerSingleArch := bufio.NewWriter(fileSingleArch)
 	writerMutiArch := bufio.NewWriter(fileMutiArch)
 	versions := edgexConfig.Versions
+	versionsArm := edgeXConfigArm.Versions
 
-	for _, version := range versions {
+	for i, version := range versions {
 		components := version.Components
+		newArray := make([]string, 0)
+		for j, _ := range components {
+			newArray = append(newArray, versionsArm[i].Components[j].Image)
+		}
+
 		for _, component := range components {
 			image := component.Image
-			//newImage := ""
-			if strings.Contains(image, "/") {
-				//newImage = prefixImgStr + strings.Split(image, "/")[1]
-				writerSingleArch.WriteString(image)
+			if !in(image, newArray) {
+				writerSingleArch.WriteString(image + " ")
 				imgArr := strings.Split(image, ":")
 				imagePre := imgArr[:len(imgArr)-1]
 				imagePre[len(imagePre)-1] = imagePre[len(imagePre)-1] + "-arm64"
 				writerSingleArch.WriteString(" " + imagePre[0] + ":" + imgArr[len(imgArr)-1])
 				writerSingleArch.WriteString("\n")
 				writerSingleArch.Flush()
-				//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + strings.Split(image, "/")[1]
 			} else {
 				writerMutiArch.WriteString(image)
 				writerMutiArch.WriteString("\n")
 				writerMutiArch.Flush()
-				//newImage = prefixImgStr + image
-				//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + image
 			}
+			//if strings.Contains(image, "/") {
+			//	//newImage = prefixImgStr + strings.Split(image, "/")[1]
+			//	writerSingleArch.WriteString(image)
+			//	writerSingleArch.WriteString(versionsArm[i].Components[j].Image)
+			//	//imgArr := strings.Split(image, ":")
+			//	//imagePre := imgArr[:len(imgArr)-1]
+			//	//imagePre[len(imagePre)-1] = imagePre[len(imagePre)-1] + "-arm64"
+			//	//writerSingleArch.WriteString(" " + imagePre[0] + ":" + imgArr[len(imgArr)-1])
+			//	writerSingleArch.WriteString("\n")
+			//	writerSingleArch.Flush()
+			//	//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + strings.Split(image, "/")[1]
+			//} else {
+			//	writerMutiArch.WriteString(image)
+			//	writerMutiArch.WriteString("\n")
+			//	writerMutiArch.Flush()
+			//	//newImage = prefixImgStr + image
+			//	//edgexConfig.Versions[i].Components[j].Image = prefixImgStr + image
+			//}
 			//newImages = append(newImages, newImage)
 		}
 	}
 	return err
+}
+
+func in(target string, str_array []string) bool {
+	for _, element := range str_array {
+		if target == element {
+			return true
+		}
+	}
+	return false
 }

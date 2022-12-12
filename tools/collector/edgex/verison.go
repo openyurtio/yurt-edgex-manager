@@ -30,6 +30,7 @@ var (
 	dirMatchRegexpPrefix  = `href="/edgexfoundry/edgex-compose/tree/`
 	rawVersionURLPrefix   = "https://raw.githubusercontent.com/edgexfoundry/edgex-compose/"
 	selectedFilePrefix    = "docker-compose"
+	selectedFilePrefixArm = "docker-compose-arm64"
 	selectedFileSuffix    = ".yml"
 	composeBuilder        = "compose-builder"
 	envFile               = []string{"common.env", "device-common.env", "common-security.env", "common-sec-stage-gate.env"}
@@ -84,6 +85,41 @@ func (v *Version) catch(isSecurity bool) error {
 	}
 
 	filename, ok := v.pickupFile(filenames, isSecurity)
+	if !ok {
+		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
+		return ErrConfigFileNotFound
+	}
+
+	err = v.catchYML(filename)
+	if err != nil {
+		return err
+	}
+
+	v.repairPorts()
+
+	return nil
+}
+
+func (v *Version) catch1(isSecurity bool) error {
+	logger := v.logger
+	logger.Infoln("Start catching, version name:", v.Name)
+
+	filenames, err := v.catchAllFilenames()
+	if err != nil {
+		return err
+	}
+
+	if ok := v.checkVersion(filenames); !ok {
+		logger.Warningln("The current version cannot be adapted,", "version name:", v.Name)
+		return ErrVersionNotAdapted
+	}
+
+	err = v.addEnv(isSecurity)
+	if err != nil {
+		return err
+	}
+
+	filename, ok := v.pickupFile1(filenames, isSecurity)
 	if !ok {
 		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
 		return ErrConfigFileNotFound
@@ -211,6 +247,27 @@ func (v *Version) checkVersion(filenames []string) bool {
 		}
 	}
 	return false
+}
+
+func (v *Version) pickupFile1(filenames []string, isSecurity bool) (string, bool) {
+	matchFile := selectedFilePrefixArm
+	matchFileWithVersion := matchFile + "-" + v.Name
+	matchFileWithVer := selectedFilePrefix + "-" + v.Name + "-arm64"
+	if !isSecurity {
+		matchFile += "-no-secty"
+		matchFileWithVersion += "-no-secty"
+	}
+	matchFile += selectedFileSuffix
+	matchFileWithVersion += selectedFileSuffix
+	matchFileWithVer += selectedFileSuffix
+	// match the configuration file with the version name or the configuration file named "docker-compose"
+	for _, filename := range filenames {
+		if filename == matchFile || filename == matchFileWithVersion || filename == matchFileWithVer {
+			return filename, true
+		}
+	}
+
+	return "", false
 }
 
 func (v *Version) pickupFile(filenames []string, isSecurity bool) (string, bool) {
