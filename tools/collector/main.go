@@ -29,9 +29,9 @@ var (
 	saveSectyConfigPath    = "../../EdgeXConfig/config.yaml"
 	saveSectyConfigPathArm = "../../EdgeXConfig/config.yaml"
 	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.yaml"
-	singleArchPath         = "./config/singlearch_imagelist.txt"
-	multiArchPath          = "./config/multiarch_imagelist.txt"
 	debug                  bool
+	amdArch                = "amd"
+	armArch                = "arm"
 )
 
 func main() {
@@ -64,14 +64,14 @@ func Run() error {
 		return err
 	}
 
-	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true)
+	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true, amdArch)
 	if err != nil {
 		return err
 	}
 
-	edgeXConfigArm, err := edgex.CollectEdgeXConfig1(versionsInfo, true)
+	edgeXConfigArm, err := edgex.CollectEdgeXConfig(versionsInfo, true, armArch)
 
-	err = edgex.ModifyImages(edgeXConfig, edgeXConfigArm)
+	err = edgex.CollectImages(edgeXConfig, edgeXConfigArm)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func Run() error {
 
 	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
 
-	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)
+	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false, amdArch)
 	if err != nil {
 		return err
 	}

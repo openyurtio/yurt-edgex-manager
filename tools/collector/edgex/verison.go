@@ -65,7 +65,7 @@ func newEdgeXConfig() *EdgeXConfig {
 	return edgeXConfig
 }
 
-func (v *Version) catch(isSecurity bool) error {
+func (v *Version) catch(isSecurity bool, arch string) error {
 	logger := v.logger
 	logger.Infoln("Start catching, version name:", v.Name)
 
@@ -84,42 +84,7 @@ func (v *Version) catch(isSecurity bool) error {
 		return err
 	}
 
-	filename, ok := v.pickupFile(filenames, isSecurity)
-	if !ok {
-		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
-		return ErrConfigFileNotFound
-	}
-
-	err = v.catchYML(filename)
-	if err != nil {
-		return err
-	}
-
-	v.repairPorts()
-
-	return nil
-}
-
-func (v *Version) catch1(isSecurity bool) error {
-	logger := v.logger
-	logger.Infoln("Start catching, version name:", v.Name)
-
-	filenames, err := v.catchAllFilenames()
-	if err != nil {
-		return err
-	}
-
-	if ok := v.checkVersion(filenames); !ok {
-		logger.Warningln("The current version cannot be adapted,", "version name:", v.Name)
-		return ErrVersionNotAdapted
-	}
-
-	err = v.addEnv(isSecurity)
-	if err != nil {
-		return err
-	}
-
-	filename, ok := v.pickupFile1(filenames, isSecurity)
+	filename, ok := v.pickupFile(filenames, isSecurity, arch)
 	if !ok {
 		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
 		return ErrConfigFileNotFound
@@ -249,40 +214,35 @@ func (v *Version) checkVersion(filenames []string) bool {
 	return false
 }
 
-func (v *Version) pickupFile1(filenames []string, isSecurity bool) (string, bool) {
-	matchFile := selectedFilePrefixArm
+func (v *Version) pickupFile(filenames []string, isSecurity bool, arch string) (string, bool) {
+	matchFile := selectedFilePrefix
 	matchFileWithVersion := matchFile + "-" + v.Name
+
+	matchFileArm := selectedFilePrefixArm
+	matchFileWithVersionArm := matchFileArm + "-" + v.Name
 	matchFileWithVer := selectedFilePrefix + "-" + v.Name + "-arm64"
 	if !isSecurity {
 		matchFile += "-no-secty"
 		matchFileWithVersion += "-no-secty"
 	}
-	matchFile += selectedFileSuffix
-	matchFileWithVersion += selectedFileSuffix
-	matchFileWithVer += selectedFileSuffix
-	// match the configuration file with the version name or the configuration file named "docker-compose"
-	for _, filename := range filenames {
-		if filename == matchFile || filename == matchFileWithVersion || filename == matchFileWithVer {
-			return filename, true
+	if arch == "amd" {
+		matchFile += selectedFileSuffix
+		matchFileWithVersion += selectedFileSuffix
+		// match the configuration file with the version name or the configuration file named "docker-compose"
+		for _, filename := range filenames {
+			if filename == matchFile || filename == matchFileWithVersion {
+				return filename, true
+			}
 		}
-	}
-
-	return "", false
-}
-
-func (v *Version) pickupFile(filenames []string, isSecurity bool) (string, bool) {
-	matchFile := selectedFilePrefix
-	matchFileWithVersion := matchFile + "-" + v.Name
-	if !isSecurity {
-		matchFile += "-no-secty"
-		matchFileWithVersion += "-no-secty"
-	}
-	matchFile += selectedFileSuffix
-	matchFileWithVersion += selectedFileSuffix
-	// match the configuration file with the version name or the configuration file named "docker-compose"
-	for _, filename := range filenames {
-		if filename == matchFile || filename == matchFileWithVersion {
-			return filename, true
+	} else if arch == "arm" {
+		matchFileArm += selectedFileSuffix
+		matchFileWithVersionArm += selectedFileSuffix
+		matchFileWithVer += selectedFileSuffix
+		// match the configuration file with the version name or the configuration file named "docker-compose-arm"
+		for _, filename := range filenames {
+			if filename == matchFileArm || filename == matchFileWithVersionArm || filename == matchFileWithVer {
+				return filename, true
+			}
 		}
 	}
 

@@ -104,3 +104,12 @@ func repairPort(envs *map[string]string) {
 		}
 	}
 }
+
+func stringIsInArray(target string, strArray []string) bool {
+	for _, element := range strArray {
+		if target == element {
+			return true
+		}
+	}
+	return false
+}
