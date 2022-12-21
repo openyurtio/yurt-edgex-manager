@@ -18,4 +18,13 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: openyurt.io
+  group: device
+  kind: EdgeX
+  path: github.com/openyurtio/yurt-edgex-manager/api/v1alpha2
+  plural: edgexes
+  version: v1alpha2
 version: "3"
