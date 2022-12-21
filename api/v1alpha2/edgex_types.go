@@ -14,13 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
@@ -31,16 +28,13 @@ const (
 	LabelEdgeXGenerate = "www.edgexfoundry.org/generate"
 )
 
-// DeploymentTemplateSpec defines the pool template of Deployment.
-type DeploymentTemplateSpec struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              appsv1.DeploymentSpec `json:"spec"`
-}
+type Component struct {
+	Name string `json:"name"`
 
-// DeploymentTemplateSpec defines the pool template of Deployment.
-type ServiceTemplateSpec struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              corev1.ServiceSpec `json:"spec"`
+	// +optional
+	Image string `json:"image,omitempty"`
+
+	// Replicas int32 `json:"replicas,omitempty"`
 }
 
 // EdgeXSpec defines the desired state of EdgeX
@@ -51,28 +45,26 @@ type EdgeXSpec struct {
 
 	PoolName string `json:"poolName,omitempty"`
 
-	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
 	// +optional
-	AdditionalService []ServiceTemplateSpec `json:"additionalServices,omitempty"`
+	Components []Component `json:"components,omitempty"`
 
 	// +optional
-	AdditionalDeployment []DeploymentTemplateSpec `json:"additionalDeployments,omitempty"`
+	Security bool `json:"security,omitempty"`
 }
 
 // EdgeXStatus defines the observed state of EdgeX
 type EdgeXStatus struct {
 	// +optional
 	Ready bool `json:"ready,omitempty"`
+
 	// +optional
 	Initialized bool `json:"initialized,omitempty"`
+
 	// +optional
-	ServiceReplicas int32 `json:"serviceReplicas,omitempty"`
+	ReadyComponentNum int32 `json:"readyComponentNum,omitempty"`
+
 	// +optional
-	ServiceReadyReplicas int32 `json:"serviceReadyReplicas,omitempty"`
-	// +optional
-	DeploymentReplicas int32 `json:"deploymentReplicas,omitempty"`
-	// +optional
-	DeploymentReadyReplicas int32 `json:"deploymentReadyReplicas,omitempty"`
+	UnreadyComponentNum int32 `json:"unreadyComponentNum,omitempty"`
 
 	// Current Edgex state
 	// +optional
@@ -84,11 +76,9 @@ type EdgeXStatus struct {
 //+kubebuilder:resource:path=edgexes
 //+kubebuilder:resource:shortName=edgex
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="The edgex ready status"
-//+kubebuilder:printcolumn:name="Service",type="integer",JSONPath=".status.serviceReplicas",description="The Service Replica."
-//+kubebuilder:printcolumn:name="ReadyService",type="integer",JSONPath=".status.serviceReadyReplicas",description="The Ready Service Replica."
-//+kubebuilder:printcolumn:name="Deployment",type="integer",JSONPath=".status.deploymentReplicas",description="The Deployment Replica."
-//+kubebuilder:printcolumn:name="ReadyDeployment",type="integer",JSONPath=".status.deploymentReadyReplicas",description="The Ready Deployment Replica."
-//+kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="ReadyComponentNum",type="integer",JSONPath=".status.readyComponentNum",description="The Ready Component."
+//+kubebuilder:printcolumn:name="UnreadyComponentNum",type="integer",JSONPath=".status.unreadyComponentNum",description="The Unready Component."
+//+kubebuilder:unservedversion
 
 // EdgeX is the Schema for the edgexes API
 type EdgeX struct {
