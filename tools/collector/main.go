@@ -55,6 +55,7 @@ func main() {
 func Run() error {
 	logger := collectLog
 
+	// Collect security version
 	edgex.SetLog(logger.WithField("collect", "edgex"))
 
 	versionsInfo, err := edgex.CollectVersionsInfo()
@@ -79,6 +80,7 @@ func Run() error {
 		return err
 	}
 
+	// Collect no-security version
 	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
 
 	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)

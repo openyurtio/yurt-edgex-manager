@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	volumesSplitMinLen        = 2
-	anonymousVolumeNamePrefix = "anonymous_volume"
+	parseIntBase        = 10
+	parseIntBaseBitSize = 32
 )
 
 type Component struct {
@@ -33,6 +33,7 @@ type Component struct {
 	Name         string            `yaml:"name"`
 	Image        string            `yaml:"image"`
 	Volumes      []Volume          `yaml:"volumns,omitempty"`
+	Ports        []Port            `yaml:"ports,omitempty"`
 	ComponentEnv map[string]string `yaml:"componentEnv,omitempty"`
 	// A pointer to the Env of the previous level
 	envRef *map[string]string
@@ -42,6 +43,13 @@ type Volume struct {
 	Name      string `yaml:"name"`
 	HostPath  string `yaml:"hostPath"`
 	MountPath string `yaml:"mountPath"`
+}
+
+type Port struct {
+	Protocol   string `yaml:"protocol"`
+	Port       int32  `yaml:"port"`
+	TargetPort int32  `yaml:"targetPort"`
+	NodePort   int32  `yaml:"nodePort,omitempty"`
 }
 
 func (c *Component) addEnv(envs map[string]interface{}) {
@@ -55,23 +63,27 @@ func (c *Component) addEnv(envs map[string]interface{}) {
 			value = rawValue
 		}
 		if _, ok := (*c.envRef)[key]; !ok {
-			unifyPort(&key, &value)
 			c.ComponentEnv[key] = value
 		}
 	}
 }
+
+const (
+	volumesSplitMinLen        = 2
+	anonymousVolumeNamePrefix = "anonymous_volume"
+)
 
 func (c *Component) fillVolumes(volumes []interface{}) {
 	logger := c.logger
 	for _, v := range volumes {
 		volumeStr, ok := v.(string)
 		if volumeStr == "" || !ok {
-			logger.Warningln("This is not a valid volume", "volume:", v)
+			logger.Warningln("This is not a valid volume", "value:", v)
 			continue
 		}
 		infos := strings.Split(volumeStr, ":")
 		if len(infos) < volumesSplitMinLen {
-			logger.Warningln("This is not a valid volume", "volume:", v)
+			logger.Warningln("This is not a valid volume", "value:", v)
 			continue
 		}
 		if volumeStr[0] == '/' {
@@ -83,7 +95,7 @@ func (c *Component) fillVolumes(volumes []interface{}) {
 			}
 			c.Volumes = append(c.Volumes, volume)
 		} else {
-			// edgex-init:/edgex-init:ro,z
+			// Like this value: edgex-init:/edgex-init:ro,z
 			volume := Volume{
 				Name:      infos[0],
 				HostPath:  infos[1],
@@ -95,10 +107,6 @@ func (c *Component) fillVolumes(volumes []interface{}) {
 	c.repairVolumes()
 }
 
-func (c *Component) repairPorts() {
-	repairPort(&c.ComponentEnv)
-}
-
 func (c *Component) repairVolumes() {
 	count := 1
 	for i := range c.Volumes {
@@ -106,5 +114,81 @@ func (c *Component) repairVolumes() {
 			c.Volumes[i].Name = anonymousVolumeNamePrefix + strconv.FormatInt(int64(count), formatIntBase)
 			count++
 		}
+	}
+}
+
+const (
+	portsSplitIgnoreProtocol = 1
+	portsSplitWithProtocol   = 2
+
+	reflectSamePort       = 1
+	reflectPortOutCluster = 2
+	reflectPortInCluster  = 3
+)
+
+func (c *Component) fillPorts(ports []interface{}) {
+	logger := c.logger
+	for _, v := range ports {
+		portStr, ok := v.(string)
+		if portStr == "" || !ok {
+			logger.Warningln("This is not a valid port", "value:", v)
+			continue
+		}
+
+		port := Port{}
+
+		// Parse protocol and supplement default tcp protocol
+		portAndProtocol := strings.Split(portStr, "/")
+		if len(portAndProtocol) == portsSplitIgnoreProtocol {
+			port.Protocol = "TCP"
+		} else if len(portAndProtocol) == portsSplitWithProtocol {
+			port.Protocol = strings.ToUpper(portAndProtocol[portsSplitWithProtocol-1])
+		} else {
+			logger.Warningln("This is not a valid port", "value:", v)
+			continue
+		}
+
+		portInfo := strings.Split(portAndProtocol[0], ":")
+
+		if len(portInfo) == reflectSamePort {
+			portNum, err := strconv.ParseInt(portInfo[0], parseIntBase, parseIntBaseBitSize)
+			if err != nil {
+				logger.Warningln("This is not a valid port", "value:", v)
+				continue
+			}
+			port.Port = int32(portNum)
+			port.TargetPort = int32(portNum)
+		} else if len(portInfo) == reflectPortOutCluster {
+			portNumInCluster, err := strconv.ParseInt(portInfo[0], parseIntBase, parseIntBaseBitSize)
+			if err != nil {
+				logger.Warningln("This is not a valid port", "value:", v)
+				continue
+			}
+			portNumOutCluster, err := strconv.ParseInt(portInfo[1], parseIntBase, parseIntBaseBitSize)
+			if err != nil {
+				logger.Warningln("This is not a valid port", "value:", v)
+				continue
+			}
+			port.Port = int32(portNumInCluster)
+			port.TargetPort = int32(portNumInCluster)
+			port.NodePort = int32(portNumOutCluster)
+		} else if len(portInfo) == reflectPortInCluster {
+			portNumPort, err := strconv.ParseInt(portInfo[1], parseIntBase, parseIntBaseBitSize)
+			if err != nil {
+				logger.Warningln("This is not a valid port", "value:", v)
+				continue
+			}
+			portNumTargetPort, err := strconv.ParseInt(portInfo[2], parseIntBase, parseIntBaseBitSize)
+			if err != nil {
+				logger.Warningln("This is not a valid port", "value:", v)
+				continue
+			}
+			port.Port = int32(portNumPort)
+			port.TargetPort = int32(portNumTargetPort)
+		} else {
+			logger.Warningln("This is not a valid port", "value:", v)
+			continue
+		}
+		c.Ports = append(c.Ports, port)
 	}
 }
