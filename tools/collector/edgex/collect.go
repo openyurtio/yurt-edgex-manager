@@ -18,18 +18,18 @@ package edgex
 
 import (
 	"bufio"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
 	collectLog           *logrus.Entry
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
-	//prefixImgStr         = "openyurt/"
-	singleArchPath = "./config/singlearch_imagelist.txt"
-	multiArchPath  = "./config/multiarch_imagelist.txt"
+	singleArchPath       = "./config/singlearch_imagelist.txt"
+	multiArchPath        = "./config/multiarch_imagelist.txt"
 )
 
 func SetLog(logger *logrus.Entry) {
