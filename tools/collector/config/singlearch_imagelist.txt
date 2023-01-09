@@ -1,0 +1,4 @@
+edgexfoundry/core-command:2.3.0 edgexfoundry/core-command-arm64:2.3.0
+edgexfoundry/app-service-configurable:2.3.0 edgexfoundry/app-service-configurable-arm64:2.3.0
+edgexfoundry/core-data:2.3.0 edgexfoundry/core-data-arm64:2.3.0
+edgexfoundry/device-rest:2.3.0 edgexfoundry/device-rest-arm64:2.3.0
