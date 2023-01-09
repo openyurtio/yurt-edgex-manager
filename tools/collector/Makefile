@@ -1,4 +1,4 @@
-REPO ?= yangbobo
+REPO ?= openyurt
 
 # Unify ports of the edgex component
 UNIFIED_PORT ?= 2000
