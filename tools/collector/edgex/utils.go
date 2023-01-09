@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
-	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -88,21 +87,6 @@ func loadEnv(logger *logrus.Entry, url string) (map[string]string, error) {
 	}
 
 	return envs, nil
-}
-
-func unifyPort(key, value *string) {
-	if len(*key) > hostportLength && (*key)[len(*key)-hostportLength:] == "PORT" {
-		*value = strconv.FormatUint(uint64(UnifiedPort), formatIntBase)
-	}
-}
-
-func repairPort(envs *map[string]string) {
-	for key := range *envs {
-		if len(key) > hostportLength && key[(len(key)-hostportLength):] == "HOST" {
-			portKey := key[:len(key)-hostportLength] + "PORT"
-			(*envs)[portKey] = strconv.FormatUint(uint64(UnifiedPort), formatIntBase)
-		}
-	}
 }
 
 func stringIsInArray(target string, strArray []string) bool {

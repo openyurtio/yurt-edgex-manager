@@ -1,3 +1,0 @@
-# TODO: These blacklisted component types need to be read and ignored when crawling information
-componentTypes:
-- ui

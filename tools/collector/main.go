@@ -18,10 +18,11 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
+
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 )
 
 var (
@@ -57,6 +58,7 @@ func main() {
 func Run() error {
 	logger := collectLog
 
+	// Collect security version
 	edgex.SetLog(logger.WithField("collect", "edgex"))
 
 	versionsInfo, err := edgex.CollectVersionsInfo()
@@ -88,18 +90,7 @@ func Run() error {
 		return err
 	}
 
-	data, err = yaml.Marshal(edgeXConfigArm)
-	if err != nil {
-		logger.Errorln("Fail to parse edgex config to yaml:", err)
-		return err
-	}
-
-	err = ioutil.WriteFile(saveSectyConfigPathArm, data, 0644)
-	if err != nil {
-		logger.Errorln("Fail to write config yaml:", err)
-		return err
-	}
-
+	// Collect no-security version
 	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
 
 	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false, amdArch)

@@ -37,8 +37,7 @@ var (
 )
 
 type EdgeXConfig struct {
-	UnifiedPort uint      `yaml:"unifiedPort"`
-	Versions    []Version `yaml:"versions"`
+	Versions []Version `yaml:"versions"`
 }
 
 type Version struct {
@@ -59,8 +58,7 @@ func newVersion(logger *logrus.Entry, name string) *Version {
 
 func newEdgeXConfig() *EdgeXConfig {
 	edgeXConfig := &EdgeXConfig{
-		UnifiedPort: UnifiedPort,
-		Versions:    make([]Version, 0),
+		Versions: make([]Version, 0),
 	}
 	return edgeXConfig
 }
@@ -95,8 +93,6 @@ func (v *Version) catch(isSecurity bool, arch string) error {
 		return err
 	}
 
-	v.repairPorts()
-
 	return nil
 }
 
@@ -106,6 +102,7 @@ func (v *Version) newComponent(name, image string) *Component {
 		Name:         name,
 		Image:        image,
 		Volumes:      []Volume{},
+		Ports:        []Port{},
 		ComponentEnv: make(map[string]string),
 		envRef:       &v.Env,
 	}
@@ -128,7 +125,6 @@ func (v *Version) addEnv(isSecurity bool) error {
 		}
 
 		for key, value := range envs {
-			unifyPort(&key, &value)
 			v.Env[key] = value
 		}
 	}
@@ -175,6 +171,11 @@ func (v *Version) catchYML(filename string) error {
 		volumes, ok := componentConfig["volumes"].([]interface{})
 		if ok {
 			component.fillVolumes(volumes)
+		}
+
+		ports, ok := componentConfig["ports"].([]interface{})
+		if ok {
+			component.fillPorts(ports)
 		}
 
 		v.Components = append(v.Components, *component)
@@ -247,11 +248,4 @@ func (v *Version) pickupFile(filenames []string, isSecurity bool, arch string) (
 	}
 
 	return "", false
-}
-
-func (v *Version) repairPorts() {
-	repairPort(&v.Env)
-	for _, component := range v.Components {
-		component.repairPorts()
-	}
 }
