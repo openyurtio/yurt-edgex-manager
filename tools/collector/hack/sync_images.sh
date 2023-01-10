@@ -6,7 +6,7 @@ set -u
 
 cat ./config/singlearch_imagelist.txt | while read line
 do
-    raw_amd64="" 
+    raw_amd64=""
     raw_arm64=""
     eval $(echo $line | awk '{ printf("raw_amd64=%s;raw_arm64=%s",$1,$2) }')
 
@@ -64,7 +64,7 @@ do
 
     if [[ $(echo $image | grep ":") == "" ]] ; then
         image="${image}:latest"
-    fi 
+    fi
 
     echo $image
 

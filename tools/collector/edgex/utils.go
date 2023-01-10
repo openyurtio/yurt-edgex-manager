@@ -17,12 +17,11 @@ limitations under the License.
 package edgex
 
 import (
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"regexp"
-
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 )
 
 var (
