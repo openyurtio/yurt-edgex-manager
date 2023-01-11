@@ -1,4 +1,7 @@
+# Target repo
 REPO ?= openyurt
+# The number of concurrent shell script processes
+THREAD ?= 4
 
 # Unify ports of the edgex component
 DEBUG ?= false
@@ -9,4 +12,4 @@ run:
 
 sync_image:
 	chmod +x ./hack/sync_images.sh
-	./hack/sync_images.sh $(REPO)
+	./hack/sync_images.sh $(REPO) $(THREAD)
