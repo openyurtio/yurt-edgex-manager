@@ -30,6 +30,7 @@ var (
 	extractVersionRegexp = `branch="(.*?)"`
 	singleArchPath       = "./config/singlearch_imagelist.txt"
 	multiArchPath        = "./config/multiarch_imagelist.txt"
+	repoName             = "openyurt/"
 )
 
 func SetLog(logger *logrus.Entry) {
@@ -76,7 +77,6 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool, arch string) (*E
 }
 
 func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
-	//newImages := make([]string, 0)
 	fileSingleArch, err := os.Create(singleArchPath)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 	for i, version := range versions {
 		components := version.Components
 		newArray := make([]string, 0)
-		for j, _ := range components {
+		for j := range components {
 			imgSplit := strings.Split(versionsArm[i].Components[j].Image, ":")[0]
 			newArray = append(newArray, imgSplit)
 		}
@@ -117,4 +117,20 @@ func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 		}
 	}
 	return err
+}
+
+func ModifyImagesName(edgexConfig *EdgeXConfig) {
+	versions := edgexConfig.Versions
+	for i, version := range versions {
+		components := version.Components
+		for j, component := range components {
+			image := component.Image
+			if strings.Contains(image, "/") {
+				edgexConfig.Versions[i].Components[j].Image = repoName + strings.Split(image, "/")[1]
+			} else {
+				edgexConfig.Versions[i].Components[j].Image = repoName + image
+			}
+		}
+	}
+
 }

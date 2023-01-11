@@ -8,7 +8,6 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/openyurtio/api v0.0.0-20220907024010-e5bfc9cc1b4b
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	k8s.io/api v0.24.1
 	k8s.io/apimachinery v0.24.1

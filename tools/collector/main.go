@@ -66,19 +66,21 @@ func Run() error {
 		return err
 	}
 
-	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true, amdArch)
+	edgeXConfigAmd, err := edgex.CollectEdgeXConfig(versionsInfo, true, amdArch)
 	if err != nil {
 		return err
 	}
 
 	edgeXConfigArm, err := edgex.CollectEdgeXConfig(versionsInfo, true, armArch)
 
-	err = edgex.CollectImages(edgeXConfig, edgeXConfigArm)
+	err = edgex.CollectImages(edgeXConfigAmd, edgeXConfigArm)
 	if err != nil {
 		return err
 	}
 
-	data, err := yaml.Marshal(edgeXConfig)
+	edgex.ModifyImagesName(edgeXConfigAmd)
+
+	data, err := yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex config to yaml:", err)
 		return err
@@ -93,12 +95,14 @@ func Run() error {
 	// Collect no-security version
 	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
 
-	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false, amdArch)
+	edgeXConfigAmd, err = edgex.CollectEdgeXConfig(versionsInfo, false, amdArch)
 	if err != nil {
 		return err
 	}
 
-	data, err = yaml.Marshal(edgeXConfig)
+	edgex.ModifyImagesName(edgeXConfigAmd)
+
+	data, err = yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex-nosecty config to yaml:", err)
 		return err
