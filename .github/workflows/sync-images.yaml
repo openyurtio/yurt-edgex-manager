@@ -1,8 +1,11 @@
 name: sync-images
 
 on:
-  push: 
-    branches: [ main ]
+  push:
+    tags:
+      - "v*"
+      - "latest"
+  workflow_dispatch: {}
 
 env:
   DOCKERHUB_REGISTRY: docker.io
@@ -30,7 +33,7 @@ jobs:
       run: REGISTRY=${{ env.DOCKERHUB_REGISTRY }} REPO=${{ env.REPO }} THREAD=${{ env.THREAD }} make sync_image
 
     - name: Login to ALI_REGISTRY
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         registry: ${{ env.ALI_REGISTRY }}
         username: ${{ secrets.ALI_REGISTRY_USERNAME }}

@@ -59,7 +59,14 @@ do
         eval $(echo $image_and_tag | awk '{ printf("image_without_tag=%s;tag=%s",$1,$2) }')
 
         # Check whether the target repo already has this tag.
-        eval $(curl -I -s -m 10 https://hub.docker.com/v2/repositories/${REPO}/$image_without_tag/tags/$tag | grep HTTP | awk '{ printf("http_code=%s;",$2) }')
+        if [[ $(echo ${REGISTRY}) == "docker.io" ]] ; then 
+            eval $(curl -I -s -m 10 https://hub.docker.com/v2/repositories/${REPO}/$image_without_tag/tags/$tag | grep HTTP | awk '{ printf("http_code=%s;",$2) }')
+        elif [[ $(echo ${REGISTRY}) == "registry.cn-hangzhou.aliyuncs.com" ]] ; then 
+            # TODO: Here we need the api of Aliyun image repo to determine whether this image already exists,
+            # for now I'm going straight to sync all images. 
+            http_code=""
+        fi
+
         if [[ $(echo $http_code) != "200" ]] ; then
             # Call docker to pull the image and push the single schema version to the remote repository (arch amd).
             docker pull ${raw_amd64}
