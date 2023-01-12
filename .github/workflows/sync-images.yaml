@@ -1,8 +1,7 @@
 name: sync-images
 
 on:
-  push:
-  pull_request:
+  push: 
     branches: [ main ]
 
 env:

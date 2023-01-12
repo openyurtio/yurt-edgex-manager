@@ -13,7 +13,7 @@ mkfifo ${FIFO}
 exec 6<>${FIFO}
 rm -rf ${FIFO}
 
-# Put '\n' into the pipe to start the initial process.
+# Put a new line into the pipe to start the initial process.
 for((i=1;i<=$THREAD;i++))
 do
     echo >&6;
@@ -88,7 +88,7 @@ done
 # For an image that is already multi-architecture, it is directly synchronized to the target repo.
 cat ${MULTI_ARCH_LIST} | while read raw_image
 do 
-    # The child process can not be started until '\n' are read from the pipe.
+    # The child process can not be started until a line are read from the pipe.
     read -u6
     {
         repo="" image="" space_image=$(echo $raw_image | tr '/' ' ')
@@ -128,7 +128,7 @@ do
             docker manifest rm $1/${image}
         fi
 
-        # Write '\n' to the pipe to indicate the end of one process and start the next.
+        # Write a new line to the pipe to indicate the end of one process and start the next.
         # Whatever happens when the child exits, write the pipe!
         echo >&6
     } &
