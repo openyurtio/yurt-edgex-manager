@@ -1,3 +1,5 @@
+# Target registry
+REGISTRY ?= docker.io
 # Target repo
 REPO ?= openyurt
 # The number of concurrent shell script processes
@@ -12,4 +14,4 @@ run:
 
 sync_image:
 	chmod +x ./hack/sync_images.sh
-	./hack/sync_images.sh $(REPO) $(THREAD)
+	./hack/sync_images.sh $(REGISTRY) $(REPO) $(THREAD)
