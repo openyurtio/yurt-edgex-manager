@@ -119,16 +119,16 @@ func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 	return err
 }
 
-func ModifyImagesName(edgexConfig *EdgeXConfig) {
+func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 	versions := edgexConfig.Versions
 	for i, version := range versions {
 		components := version.Components
 		for j, component := range components {
 			image := component.Image
 			if strings.Contains(image, "/") {
-				edgexConfig.Versions[i].Components[j].Image = repoName + strings.Split(image, "/")[1]
+				edgexConfig.Versions[i].Components[j].Image = repo + "/" + strings.Split(image, "/")[1]
 			} else {
-				edgexConfig.Versions[i].Components[j].Image = repoName + image
+				edgexConfig.Versions[i].Components[j].Image = repo + "/" + image
 			}
 		}
 	}

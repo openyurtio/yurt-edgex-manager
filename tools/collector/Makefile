@@ -5,7 +5,7 @@ DEBUG ?= false
 
 .PHONY: run
 run:
-	go run main.go --debug=$(DEBUG)
+	go run main.go --debug=$(DEBUG) --repo=$(REPO)
 
 sync_image:
 	chmod +x ./hack/sync_images.sh

@@ -31,6 +31,7 @@ var (
 	saveSectyConfigPathArm = "../../EdgeXConfig/config.yaml"
 	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.yaml"
 	debug                  bool
+	repo                   string
 	amdArch                = "amd"
 	armArch                = "arm"
 )
@@ -38,6 +39,7 @@ var (
 func main() {
 	flag.BoolVar(&debug, "debug", false, "Start debug module")
 	flag.UintVar(&edgex.UnifiedPort, "unified-port", 2000, "Unify ports of the edgex component")
+	flag.StringVar(&repo, "repo", "openyurt", "repository name")
 
 	flag.Parse()
 
@@ -78,7 +80,7 @@ func Run() error {
 		return err
 	}
 
-	edgex.ModifyImagesName(edgeXConfigAmd)
+	edgex.ModifyImagesName(edgeXConfigAmd, repo)
 
 	data, err := yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
@@ -100,7 +102,7 @@ func Run() error {
 		return err
 	}
 
-	edgex.ModifyImagesName(edgeXConfigAmd)
+	edgex.ModifyImagesName(edgeXConfigAmd, repo)
 
 	data, err = yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
