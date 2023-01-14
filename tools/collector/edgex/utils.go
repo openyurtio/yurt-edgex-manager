@@ -17,12 +17,11 @@ limitations under the License.
 package edgex
 
 import (
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"regexp"
-
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -87,4 +86,13 @@ func loadEnv(logger *logrus.Entry, url string) (map[string]string, error) {
 	}
 
 	return envs, nil
+}
+
+func stringIsInArray(target string, strArray []string) bool {
+	for _, element := range strArray {
+		if target == element {
+			return true
+		}
+	}
+	return false
 }

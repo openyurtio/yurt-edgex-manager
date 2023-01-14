@@ -26,15 +26,20 @@ import (
 )
 
 var (
-	collectLog            = logrus.New()
-	saveSectyConfigPath   = "../../EdgeXConfig/config.yaml"
-	saveNoSectyConfigPath = "../../EdgeXConfig/config-nosecty.yaml"
-	debug                 bool
+	collectLog             = logrus.New()
+	saveSectyConfigPath    = "../../EdgeXConfig/config.yaml"
+	saveSectyConfigPathArm = "../../EdgeXConfig/config.yaml"
+	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.yaml"
+	debug                  bool
+	repo                   string
+	amdArch                = "amd"
+	armArch                = "arm"
 )
 
 func main() {
 	flag.BoolVar(&debug, "debug", false, "Start debug module")
 	flag.UintVar(&edgex.UnifiedPort, "unified-port", 2000, "Unify ports of the edgex component")
+	flag.StringVar(&repo, "repo", "openyurt", "repository name")
 
 	flag.Parse()
 
@@ -63,12 +68,21 @@ func Run() error {
 		return err
 	}
 
-	edgeXConfig, err := edgex.CollectEdgeXConfig(versionsInfo, true)
+	edgeXConfigAmd, err := edgex.CollectEdgeXConfig(versionsInfo, true, amdArch)
 	if err != nil {
 		return err
 	}
 
-	data, err := yaml.Marshal(edgeXConfig)
+	edgeXConfigArm, err := edgex.CollectEdgeXConfig(versionsInfo, true, armArch)
+
+	err = edgex.CollectImages(edgeXConfigAmd, edgeXConfigArm)
+	if err != nil {
+		return err
+	}
+
+	edgex.ModifyImagesName(edgeXConfigAmd, repo)
+
+	data, err := yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex config to yaml:", err)
 		return err
@@ -83,12 +97,14 @@ func Run() error {
 	// Collect no-security version
 	edgex.SetLog(logger.WithField("collect", "edgex-nosecty"))
 
-	edgeXConfig, err = edgex.CollectEdgeXConfig(versionsInfo, false)
+	edgeXConfigAmd, err = edgex.CollectEdgeXConfig(versionsInfo, false, amdArch)
 	if err != nil {
 		return err
 	}
 
-	data, err = yaml.Marshal(edgeXConfig)
+	edgex.ModifyImagesName(edgeXConfigAmd, repo)
+
+	data, err = yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex-nosecty config to yaml:", err)
 		return err

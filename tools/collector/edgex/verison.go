@@ -30,6 +30,7 @@ var (
 	dirMatchRegexpPrefix  = `href="/edgexfoundry/edgex-compose/tree/`
 	rawVersionURLPrefix   = "https://raw.githubusercontent.com/edgexfoundry/edgex-compose/"
 	selectedFilePrefix    = "docker-compose"
+	selectedFilePrefixArm = "docker-compose-arm64"
 	selectedFileSuffix    = ".yml"
 	composeBuilder        = "compose-builder"
 	envFile               = []string{"common.env", "device-common.env", "common-security.env", "common-sec-stage-gate.env"}
@@ -62,7 +63,7 @@ func newEdgeXConfig() *EdgeXConfig {
 	return edgeXConfig
 }
 
-func (v *Version) catch(isSecurity bool) error {
+func (v *Version) catch(isSecurity bool, arch string) error {
 	logger := v.logger
 	logger.Infoln("Start catching, version name:", v.Name)
 
@@ -81,7 +82,7 @@ func (v *Version) catch(isSecurity bool) error {
 		return err
 	}
 
-	filename, ok := v.pickupFile(filenames, isSecurity)
+	filename, ok := v.pickupFile(filenames, isSecurity, arch)
 	if !ok {
 		logger.Warningln("Configuration file is not found,", "version name:", v.Name)
 		return ErrConfigFileNotFound
@@ -214,19 +215,35 @@ func (v *Version) checkVersion(filenames []string) bool {
 	return false
 }
 
-func (v *Version) pickupFile(filenames []string, isSecurity bool) (string, bool) {
+func (v *Version) pickupFile(filenames []string, isSecurity bool, arch string) (string, bool) {
 	matchFile := selectedFilePrefix
 	matchFileWithVersion := matchFile + "-" + v.Name
+
+	matchFileArm := selectedFilePrefixArm
+	matchFileWithVersionArm := matchFileArm + "-" + v.Name
+	matchFileWithVer := selectedFilePrefix + "-" + v.Name + "-arm64"
 	if !isSecurity {
 		matchFile += "-no-secty"
 		matchFileWithVersion += "-no-secty"
 	}
-	matchFile += selectedFileSuffix
-	matchFileWithVersion += selectedFileSuffix
-	// match the configuration file with the version name or the configuration file named "docker-compose"
-	for _, filename := range filenames {
-		if filename == matchFile || filename == matchFileWithVersion {
-			return filename, true
+	if arch == "amd" {
+		matchFile += selectedFileSuffix
+		matchFileWithVersion += selectedFileSuffix
+		// match the configuration file with the version name or the configuration file named "docker-compose"
+		for _, filename := range filenames {
+			if filename == matchFile || filename == matchFileWithVersion {
+				return filename, true
+			}
+		}
+	} else if arch == "arm" {
+		matchFileArm += selectedFileSuffix
+		matchFileWithVersionArm += selectedFileSuffix
+		matchFileWithVer += selectedFileSuffix
+		// match the configuration file with the version name or the configuration file named "docker-compose-arm"
+		for _, filename := range filenames {
+			if filename == matchFileArm || filename == matchFileWithVersionArm || filename == matchFileWithVer {
+				return filename, true
+			}
 		}
 	}
 

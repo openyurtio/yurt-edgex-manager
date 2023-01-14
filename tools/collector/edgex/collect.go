@@ -17,6 +17,10 @@ limitations under the License.
 package edgex
 
 import (
+	"bufio"
+	"os"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,6 +28,8 @@ var (
 	collectLog           *logrus.Entry
 	branchesURL          = "https://github.com/edgexfoundry/edgex-compose/branches/all"
 	extractVersionRegexp = `branch="(.*?)"`
+	singleArchPath       = "./config/singlearch_imagelist.txt"
+	multiArchPath        = "./config/multiarch_imagelist.txt"
 )
 
 func SetLog(logger *logrus.Entry) {
@@ -42,7 +48,7 @@ func CollectVersionsInfo() ([]string, error) {
 	return branches, nil
 }
 
-func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, error) {
+func CollectEdgeXConfig(versionsInfo []string, isSecurity bool, arch string) (*EdgeXConfig, error) {
 	logger := collectLog
 	logger.Infoln("Distributing version")
 
@@ -55,7 +61,7 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, e
 		}
 
 		version := newVersion(logger, versionName)
-		err := version.catch(isSecurity)
+		err := version.catch(isSecurity, arch)
 		if err != nil && err == ErrConfigFileNotFound {
 			logger.Warningln("The configuration file for this version could not be found,", "version:", versionName)
 			continue
@@ -67,4 +73,63 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool) (*EdgeXConfig, e
 	}
 
 	return edgeXConfig, nil
+}
+
+func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
+	fileSingleArch, err := os.Create(singleArchPath)
+	if err != nil {
+		return err
+	}
+	fileMutiArch, err := os.Create(multiArchPath)
+	if err != nil {
+		return err
+	}
+	defer fileSingleArch.Close()
+	defer fileMutiArch.Close()
+
+	writerSingleArch, writerMutiArch := bufio.NewWriter(fileSingleArch), bufio.NewWriter(fileMutiArch)
+	versions, versionsArm := edgexConfig.Versions, edgeXConfigArm.Versions
+
+	for i, version := range versions {
+		components := version.Components
+		newArray := make([]string, 0)
+		for j := range components {
+			imgSplit := strings.Split(versionsArm[i].Components[j].Image, ":")[0]
+			newArray = append(newArray, imgSplit)
+		}
+
+		for _, component := range components {
+			image := component.Image
+			if !stringIsInArray(strings.Split(image, ":")[0], newArray) {
+				writerSingleArch.WriteString(image + " ")
+				imgArr := strings.Split(image, ":")
+				imagePre := imgArr[:len(imgArr)-1]
+				imagePre[len(imagePre)-1] = imagePre[len(imagePre)-1] + "-arm64"
+				writerSingleArch.WriteString(" " + imagePre[0] + ":" + imgArr[len(imgArr)-1])
+				writerSingleArch.WriteString("\n")
+				writerSingleArch.Flush()
+			} else {
+				writerMutiArch.WriteString(image)
+				writerMutiArch.WriteString("\n")
+				writerMutiArch.Flush()
+			}
+		}
+	}
+	return err
+}
+
+func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
+	versions := edgexConfig.Versions
+	for i, version := range versions {
+		components := version.Components
+		for j, component := range components {
+			image := component.Image
+			if strings.Contains(image, "/") {
+				edgexConfig.Versions[i].Components[j].Image = repo + "/" + strings.Split(image, "/")[1]
+			} else {
+				edgexConfig.Versions[i].Components[j].Image = repo + "/" + image
+			}
+		}
+	}
+
 }
