@@ -30,7 +30,6 @@ var (
 	extractVersionRegexp = `branch="(.*?)"`
 	singleArchPath       = "./config/singlearch_imagelist.txt"
 	multiArchPath        = "./config/multiarch_imagelist.txt"
-	repoName             = "openyurt/"
 )
 
 func SetLog(logger *logrus.Entry) {
