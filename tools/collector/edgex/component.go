@@ -70,7 +70,7 @@ func (c *Component) addEnv(envs map[string]interface{}) {
 
 const (
 	volumesSplitMinLen        = 2
-	anonymousVolumeNamePrefix = "anonymous_volume"
+	anonymousVolumeNamePrefix = "anonymous-volume"
 )
 
 func (c *Component) fillVolumes(volumes []interface{}) {
