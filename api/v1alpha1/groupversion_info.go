@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the device v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=device.openyurt.io
+// +kubebuilder:object:generate=true
+// +groupName=device.openyurt.io
 package v1alpha1
 
 import (

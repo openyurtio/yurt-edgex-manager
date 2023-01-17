@@ -34,11 +34,110 @@ versions:
         STAGEGATE_SECRETSTORESETUP_TOKENS_READYPORT: "54322"
         STAGEGATE_WAITFOR_TIMEOUT: 60s
       components:
+        - name: edgex-core-command
+          image: openyurt/core-command:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-command
+              mountPath: /tmp/edgex/secrets/core-command
+          ports:
+            - protocol: TCP
+              port: 59882
+              targetPort: 59882
+          componentEnv:
+            MESSAGEQUEUE_EXTERNAL_URL: tcp://edgex-mqtt-broker:1883
+            MESSAGEQUEUE_INTERNAL_HOST: edgex-redis
+            SERVICE_HOST: edgex-core-command
+        - name: edgex-device-virtual
+          image: openyurt/device-virtual:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/device-virtual
+              mountPath: /tmp/edgex/secrets/device-virtual
+          ports:
+            - protocol: TCP
+              port: 59900
+              targetPort: 59900
+          componentEnv:
+            SERVICE_HOST: edgex-device-virtual
+        - name: edgex-security-bootstrapper
+          image: openyurt/security-bootstrapper:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+          componentEnv:
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
+              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
+            - name: anonymous-volume2
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-vault
+          image: openyurt/vault:1.11.4
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: vault-file
+              hostPath: ""
+              mountPath: /vault/file
+            - name: vault-logs
+              hostPath: ""
+              mountPath: /vault/logs
+          ports:
+            - protocol: TCP
+              port: 8200
+              targetPort: 8200
+          componentEnv:
+            VAULT_ADDR: http://edgex-vault:8200
+            VAULT_CONFIG_DIR: /vault/config
+            VAULT_UI: "true"
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/app-rules-engine
+              mountPath: /tmp/edgex/secrets/app-rules-engine
+          ports:
+            - protocol: TCP
+              port: 59701
+              targetPort: 59701
+          componentEnv:
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
         - name: edgex-core-data
           image: openyurt/core-data:2.3.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/core-data
@@ -53,50 +152,42 @@ versions:
           componentEnv:
             SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/core-data/secrets-token.json
             SERVICE_HOST: edgex-core-data
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.3.0
+        - name: edgex-redis
+          image: openyurt/redis:7.0.5-alpine
           volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
+            - name: redis-config
+              hostPath: ""
+              mountPath: /run/redis/conf
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-rest
-              mountPath: /tmp/edgex/secrets/device-rest
+              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
+              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
           ports:
             - protocol: TCP
-              port: 59986
-              targetPort: 59986
+              port: 6379
+              targetPort: 6379
           componentEnv:
-            SERVICE_HOST: edgex-device-rest
-        - name: edgex-device-virtual
-          image: openyurt/device-virtual:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-virtual
-              mountPath: /tmp/edgex/secrets/device-virtual
-          ports:
-            - protocol: TCP
-              port: 59900
-              targetPort: 59900
-          componentEnv:
-            SERVICE_HOST: edgex-device-virtual
+            DATABASECONFIG_NAME: redis.conf
+            DATABASECONFIG_PATH: /run/redis/conf
         - name: edgex-kong
           image: openyurt/kong:2.8.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
               mountPath: /tmp/edgex/secrets/security-proxy-setup
             - name: postgres-config
-              hostPath: /tmp/postgres-config
+              hostPath: ""
               mountPath: /tmp/postgres-config
             - name: kong
-              hostPath: /usr/local/kong
+              hostPath: ""
               mountPath: /usr/local/kong
           ports:
             - protocol: TCP
@@ -124,17 +215,33 @@ versions:
             KONG_PROXY_ERROR_LOG: /dev/stderr
             KONG_SSL_CIPHER_SUITE: modern
             KONG_STATUS_LISTEN: 0.0.0.0:8100
+        - name: edgex-core-metadata
+          image: openyurt/core-metadata:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-metadata
+              mountPath: /tmp/edgex/secrets/core-metadata
+          ports:
+            - protocol: TCP
+              port: 59881
+              targetPort: 59881
+          componentEnv:
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SERVICE_HOST: edgex-core-metadata
         - name: edgex-kong-db
           image: openyurt/postgres:13.8-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: postgres-config
-              hostPath: /tmp/postgres-config
+              hostPath: ""
               mountPath: /tmp/postgres-config
             - name: postgres-data
-              hostPath: /var/lib/postgresql/data
+              hostPath: ""
               mountPath: /var/lib/postgresql/data
           ports:
             - protocol: TCP
@@ -144,14 +251,140 @@ versions:
             POSTGRES_DB: kong
             POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
             POSTGRES_USER: kong
+        - name: edgex-kuiper
+          image: openyurt/ekuiper:1.7.1-alpine
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: kuiper-data
+              hostPath: ""
+              mountPath: /kuiper/data
+            - name: kuiper-connections
+              hostPath: ""
+              mountPath: /kuiper/etc/connections
+            - name: kuiper-sources
+              hostPath: ""
+              mountPath: /kuiper/etc/sources
+          ports:
+            - protocol: TCP
+              port: 59720
+              targetPort: 59720
+          componentEnv:
+            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
+            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
+            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
+            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
+            EDGEX__DEFAULT__PORT: "6379"
+            EDGEX__DEFAULT__PROTOCOL: redis
+            EDGEX__DEFAULT__SERVER: edgex-redis
+            EDGEX__DEFAULT__TOPIC: rules-events
+            EDGEX__DEFAULT__TYPE: redis
+            KUIPER__BASIC__CONSOLELOG: "true"
+            KUIPER__BASIC__RESTPORT: "59720"
+        - name: edgex-security-secretstore-setup
+          image: openyurt/security-secretstore-setup:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets
+              mountPath: /tmp/edgex/secrets
+            - name: kong
+              hostPath: ""
+              mountPath: /tmp/kong
+            - name: kuiper-sources
+              hostPath: ""
+              mountPath: /tmp/kuiper
+            - name: kuiper-connections
+              hostPath: ""
+              mountPath: /tmp/kuiper-connections
+            - name: vault-config
+              hostPath: ""
+              mountPath: /vault/config
+          componentEnv:
+            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],message-bus[device-rest],redisdb[device-virtual],message-bus[device-virtual]
+            ADD_SECRETSTORE_TOKENS: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            SECUREMESSAGEBUS_TYPE: redis
+        - name: edgex-ui-go
+          image: openyurt/edgex-ui:2.3.0
+          ports:
+            - protocol: TCP
+              port: 4000
+              targetPort: 4000
+              nodePort: 4000
+          componentEnv:
+            SERVICE_HOST: edgex-ui-go
+        - name: edgex-core-consul
+          image: openyurt/consul:1.13.2
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: consul-acl-token
+              hostPath: ""
+              mountPath: /tmp/edgex/secrets/consul-acl-token
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/edgex-consul
+              mountPath: /tmp/edgex/secrets/edgex-consul
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+          componentEnv:
+            ADD_REGISTRY_ACL_ROLES: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
+            STAGEGATE_REGISTRY_ACL_MANAGEMENTTOKENPATH: /tmp/edgex/secrets/consul-acl-token/mgmt_token.json
+            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/device-rest
+              mountPath: /tmp/edgex/secrets/device-rest
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.3.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/support-notifications
+              mountPath: /tmp/edgex/secrets/support-notifications
+          ports:
+            - protocol: TCP
+              port: 59860
+              targetPort: 59860
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
         - name: edgex-security-proxy-setup
           image: openyurt/security-proxy-setup:2.3.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
+              hostPath: ""
               mountPath: /tmp/edgex/secrets/consul-acl-token
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
@@ -172,7 +405,7 @@ versions:
           image: openyurt/support-scheduler:2.3.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/support-scheduler
@@ -185,239 +418,6 @@ versions:
             INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
             INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
             SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-ui-go
-          image: openyurt/edgex-ui:2.3.0
-          ports:
-            - protocol: TCP
-              port: 4000
-              targetPort: 4000
-              nodePort: 4000
-          componentEnv:
-            SERVICE_HOST: edgex-ui-go
-        - name: edgex-core-metadata
-          image: openyurt/core-metadata:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-metadata
-              mountPath: /tmp/edgex/secrets/core-metadata
-          ports:
-            - protocol: TCP
-              port: 59881
-              targetPort: 59881
-          componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SERVICE_HOST: edgex-core-metadata
-        - name: edgex-kuiper
-          image: openyurt/ekuiper:1.7.1-alpine
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: kuiper-data
-              hostPath: /kuiper/data
-              mountPath: /kuiper/data
-            - name: kuiper-connections
-              hostPath: /kuiper/etc/connections
-              mountPath: /kuiper/etc/connections
-            - name: kuiper-sources
-              hostPath: /kuiper/etc/sources
-              mountPath: /kuiper/etc/sources
-          ports:
-            - protocol: TCP
-              port: 59720
-              targetPort: 59720
-          componentEnv:
-            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
-            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
-            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
-            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
-            EDGEX__DEFAULT__PORT: "6379"
-            EDGEX__DEFAULT__PROTOCOL: redis
-            EDGEX__DEFAULT__SERVER: edgex-redis
-            EDGEX__DEFAULT__TOPIC: rules-events
-            EDGEX__DEFAULT__TYPE: redis
-            KUIPER__BASIC__CONSOLELOG: "true"
-            KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
-              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
-            - name: anonymous-volume2
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
-          ports:
-            - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-core-command
-          image: openyurt/core-command:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-command
-              mountPath: /tmp/edgex/secrets/core-command
-          ports:
-            - protocol: TCP
-              port: 59882
-              targetPort: 59882
-          componentEnv:
-            MESSAGEQUEUE_EXTERNAL_URL: tcp://edgex-mqtt-broker:1883
-            MESSAGEQUEUE_INTERNAL_HOST: edgex-redis
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-core-consul
-          image: openyurt/consul:1.13.2
-          volumns:
-            - name: consul-config
-              hostPath: /consul/config
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: /consul/data
-              mountPath: /consul/data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
-              mountPath: /tmp/edgex/secrets/consul-acl-token
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/edgex-consul
-              mountPath: /tmp/edgex/secrets/edgex-consul
-          ports:
-            - protocol: TCP
-              port: 8500
-              targetPort: 8500
-          componentEnv:
-            ADD_REGISTRY_ACL_ROLES: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
-            STAGEGATE_REGISTRY_ACL_MANAGEMENTTOKENPATH: /tmp/edgex/secrets/consul-acl-token/mgmt_token.json
-            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
-        - name: edgex-vault
-          image: openyurt/vault:1.11.4
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: vault-file
-              hostPath: /vault/file
-              mountPath: /vault/file
-            - name: vault-logs
-              hostPath: /vault/logs
-              mountPath: /vault/logs
-          ports:
-            - protocol: TCP
-              port: 8200
-              targetPort: 8200
-          componentEnv:
-            VAULT_ADDR: http://edgex-vault:8200
-            VAULT_CONFIG_DIR: /vault/config
-            VAULT_UI: "true"
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/app-rules-engine
-              mountPath: /tmp/edgex/secrets/app-rules-engine
-          ports:
-            - protocol: TCP
-              port: 59701
-              targetPort: 59701
-          componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-redis
-          image: openyurt/redis:7.0.5-alpine
-          volumns:
-            - name: db-data
-              hostPath: /data
-              mountPath: /data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: redis-config
-              hostPath: /run/redis/conf
-              mountPath: /run/redis/conf
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
-              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
-          componentEnv:
-            DATABASECONFIG_NAME: redis.conf
-            DATABASECONFIG_PATH: /run/redis/conf
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-notifications
-              mountPath: /tmp/edgex/secrets/support-notifications
-          ports:
-            - protocol: TCP
-              port: 59860
-              targetPort: 59860
-          componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-security-secretstore-setup
-          image: openyurt/security-secretstore-setup:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets
-              mountPath: /tmp/edgex/secrets
-            - name: kong
-              hostPath: /tmp/kong
-              mountPath: /tmp/kong
-            - name: kuiper-sources
-              hostPath: /tmp/kuiper
-              mountPath: /tmp/kuiper
-            - name: kuiper-connections
-              hostPath: /tmp/kuiper-connections
-              mountPath: /tmp/kuiper-connections
-            - name: vault-config
-              hostPath: /vault/config
-              mountPath: /vault/config
-          componentEnv:
-            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],message-bus[device-rest],redisdb[device-virtual],message-bus[device-virtual]
-            ADD_SECRETSTORE_TOKENS: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            SECUREMESSAGEBUS_TYPE: redis
-        - name: edgex-security-bootstrapper
-          image: openyurt/security-bootstrapper:2.3.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-          componentEnv:
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
     - versionName: jakarta
       env:
         API_GATEWAY_HOST: edgex-kong
@@ -450,179 +450,38 @@ versions:
         STAGEGATE_SECRETSTORESETUP_TOKENS_READYPORT: "54322"
         STAGEGATE_WAITFOR_TIMEOUT: 60s
       components:
-        - name: edgex-security-bootstrapper
-          image: openyurt/security-bootstrapper:2.1.1
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-          componentEnv:
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-        - name: edgex-ui-go
-          image: openyurt/edgex-ui:2.1.0
-          ports:
-            - protocol: TCP
-              port: 4000
-              targetPort: 4000
-              nodePort: 4000
-        - name: edgex-device-virtual
-          image: openyurt/device-virtual:2.1.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-virtual
-              mountPath: /tmp/edgex/secrets/device-virtual
+              hostPath: /tmp/edgex/secrets/app-rules-engine
+              mountPath: /tmp/edgex/secrets/app-rules-engine
           ports:
             - protocol: TCP
-              port: 59900
-              targetPort: 59900
+              port: 59701
+              targetPort: 59701
           componentEnv:
-            SERVICE_HOST: edgex-device-virtual
-        - name: edgex-kong-db
-          image: openyurt/postgres:13.4-alpine
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: postgres-config
-              hostPath: /tmp/postgres-config
-              mountPath: /tmp/postgres-config
-            - name: postgres-data
-              hostPath: /var/lib/postgresql/data
-              mountPath: /var/lib/postgresql/data
-          ports:
-            - protocol: TCP
-              port: 5432
-              targetPort: 5432
-          componentEnv:
-            POSTGRES_DB: kong
-            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
-            POSTGRES_USER: kong
-        - name: edgex-core-metadata
-          image: openyurt/core-metadata:2.1.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-metadata
-              mountPath: /tmp/edgex/secrets/core-metadata
-          ports:
-            - protocol: TCP
-              port: 59881
-              targetPort: 59881
-          componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SERVICE_HOST: edgex-core-metadata
-        - name: edgex-security-proxy-setup
-          image: openyurt/security-proxy-setup:2.1.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
-              mountPath: /tmp/edgex/secrets/consul-acl-token
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/security-proxy-setup
-              mountPath: /tmp/edgex/secrets/security-proxy-setup
-          componentEnv:
-            ADD_PROXY_ROUTE: ""
-            KONGURL_SERVER: edgex-kong
-            ROUTES_CORE_COMMAND_HOST: edgex-core-command
-            ROUTES_CORE_CONSUL_HOST: edgex-core-consul
-            ROUTES_CORE_DATA_HOST: edgex-core-data
-            ROUTES_CORE_METADATA_HOST: edgex-core-metadata
-            ROUTES_DEVICE_VIRTUAL_HOST: device-virtual
-            ROUTES_RULES_ENGINE_HOST: edgex-kuiper
-            ROUTES_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
-            ROUTES_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
-            ROUTES_SYS_MGMT_AGENT_HOST: edgex-sys-mgmt-agent
-        - name: edgex-kuiper
-          image: openyurt/ekuiper:1.4.4-alpine
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: kuiper-data
-              hostPath: /kuiper/data
-              mountPath: /kuiper/data
-            - name: kuiper-connections
-              hostPath: /kuiper/etc/connections
-              mountPath: /kuiper/etc/connections
-            - name: kuiper-sources
-              hostPath: /kuiper/etc/sources
-              mountPath: /kuiper/etc/sources
-          ports:
-            - protocol: TCP
-              port: 59720
-              targetPort: 59720
-          componentEnv:
-            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
-            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
-            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
-            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
-            EDGEX__DEFAULT__PORT: "6379"
-            EDGEX__DEFAULT__PROTOCOL: redis
-            EDGEX__DEFAULT__SERVER: edgex-redis
-            EDGEX__DEFAULT__TOPIC: rules-events
-            EDGEX__DEFAULT__TYPE: redis
-            KUIPER__BASIC__CONSOLELOG: "true"
-            KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-support-scheduler
-          image: openyurt/support-scheduler:2.1.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-scheduler
-              mountPath: /tmp/edgex/secrets/support-scheduler
-          ports:
-            - protocol: TCP
-              port: 59861
-              targetPort: 59861
-          componentEnv:
-            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
-            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
-            SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-vault
-          image: openyurt/vault:1.8.4
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: vault-file
-              hostPath: /vault/file
-              mountPath: /vault/file
-            - name: vault-logs
-              hostPath: /vault/logs
-              mountPath: /vault/logs
-          ports:
-            - protocol: TCP
-              port: 8200
-              targetPort: 8200
-          componentEnv:
-            VAULT_ADDR: http://edgex-vault:8200
-            VAULT_CONFIG_DIR: /vault/config
-            VAULT_UI: "true"
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
         - name: edgex-kong
           image: openyurt/kong:2.5.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
               mountPath: /tmp/edgex/secrets/security-proxy-setup
             - name: postgres-config
-              hostPath: /tmp/postgres-config
+              hostPath: ""
               mountPath: /tmp/postgres-config
             - name: kong
-              hostPath: /usr/local/kong
+              hostPath: ""
               mountPath: /usr/local/kong
           ports:
             - protocol: TCP
@@ -650,26 +509,140 @@ versions:
             KONG_PROXY_ERROR_LOG: /dev/stderr
             KONG_SSL_CIPHER_SUITE: modern
             KONG_STATUS_LISTEN: 0.0.0.0:8100
-        - name: edgex-core-command
-          image: openyurt/core-command:2.1.1
+        - name: edgex-kong-db
+          image: openyurt/postgres:13.4-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-command
-              mountPath: /tmp/edgex/secrets/core-command
+            - name: postgres-config
+              hostPath: ""
+              mountPath: /tmp/postgres-config
+            - name: postgres-data
+              hostPath: ""
+              mountPath: /var/lib/postgresql/data
           ports:
             - protocol: TCP
-              port: 59882
-              targetPort: 59882
+              port: 5432
+              targetPort: 5432
           componentEnv:
-            SERVICE_HOST: edgex-core-command
+            POSTGRES_DB: kong
+            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
+            POSTGRES_USER: kong
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
+              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
+            - name: anonymous-volume2
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-kuiper
+          image: openyurt/ekuiper:1.4.4-alpine
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: kuiper-data
+              hostPath: ""
+              mountPath: /kuiper/data
+            - name: kuiper-connections
+              hostPath: ""
+              mountPath: /kuiper/etc/connections
+            - name: kuiper-sources
+              hostPath: ""
+              mountPath: /kuiper/etc/sources
+          ports:
+            - protocol: TCP
+              port: 59720
+              targetPort: 59720
+          componentEnv:
+            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
+            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
+            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
+            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
+            EDGEX__DEFAULT__PORT: "6379"
+            EDGEX__DEFAULT__PROTOCOL: redis
+            EDGEX__DEFAULT__SERVER: edgex-redis
+            EDGEX__DEFAULT__TOPIC: rules-events
+            EDGEX__DEFAULT__TYPE: redis
+            KUIPER__BASIC__CONSOLELOG: "true"
+            KUIPER__BASIC__RESTPORT: "59720"
+        - name: edgex-security-bootstrapper
+          image: openyurt/security-bootstrapper:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+          componentEnv:
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+        - name: edgex-vault
+          image: openyurt/vault:1.8.4
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: vault-file
+              hostPath: ""
+              mountPath: /vault/file
+            - name: vault-logs
+              hostPath: ""
+              mountPath: /vault/logs
+          ports:
+            - protocol: TCP
+              port: 8200
+              targetPort: 8200
+          componentEnv:
+            VAULT_ADDR: http://edgex-vault:8200
+            VAULT_CONFIG_DIR: /vault/config
+            VAULT_UI: "true"
+        - name: edgex-core-consul
+          image: openyurt/consul:1.10.3
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: consul-acl-token
+              hostPath: ""
+              mountPath: /tmp/edgex/secrets/consul-acl-token
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/edgex-consul
+              mountPath: /tmp/edgex/secrets/edgex-consul
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+              nodePort: 8500
+          componentEnv:
+            ADD_REGISTRY_ACL_ROLES: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
+            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
         - name: edgex-core-data
           image: openyurt/core-data:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/core-data
@@ -688,7 +661,7 @@ versions:
           image: openyurt/device-rest:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/device-rest
@@ -699,99 +672,71 @@ versions:
               targetPort: 59986
           componentEnv:
             SERVICE_HOST: edgex-device-rest
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.1.1
+        - name: edgex-device-virtual
+          image: openyurt/device-virtual:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-notifications
-              mountPath: /tmp/edgex/secrets/support-notifications
+              hostPath: /tmp/edgex/secrets/device-virtual
+              mountPath: /tmp/edgex/secrets/device-virtual
           ports:
             - protocol: TCP
-              port: 59860
-              targetPort: 59860
+              port: 59900
+              targetPort: 59900
           componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.1.1
+            SERVICE_HOST: edgex-device-virtual
+        - name: edgex-security-proxy-setup
+          image: openyurt/security-proxy-setup:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
-              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
-            - name: anonymous-volume2
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
-          ports:
-            - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.1.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/app-rules-engine
-              mountPath: /tmp/edgex/secrets/app-rules-engine
-          ports:
-            - protocol: TCP
-              port: 59701
-              targetPort: 59701
-          componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-core-consul
-          image: openyurt/consul:1.10.3
-          volumns:
-            - name: consul-config
-              hostPath: /consul/config
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: /consul/data
-              mountPath: /consul/data
-            - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
+              hostPath: ""
               mountPath: /tmp/edgex/secrets/consul-acl-token
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/edgex-consul
-              mountPath: /tmp/edgex/secrets/edgex-consul
+              hostPath: /tmp/edgex/secrets/security-proxy-setup
+              mountPath: /tmp/edgex/secrets/security-proxy-setup
+          componentEnv:
+            ADD_PROXY_ROUTE: ""
+            KONGURL_SERVER: edgex-kong
+            ROUTES_CORE_COMMAND_HOST: edgex-core-command
+            ROUTES_CORE_CONSUL_HOST: edgex-core-consul
+            ROUTES_CORE_DATA_HOST: edgex-core-data
+            ROUTES_CORE_METADATA_HOST: edgex-core-metadata
+            ROUTES_DEVICE_VIRTUAL_HOST: device-virtual
+            ROUTES_RULES_ENGINE_HOST: edgex-kuiper
+            ROUTES_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
+            ROUTES_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
+            ROUTES_SYS_MGMT_AGENT_HOST: edgex-sys-mgmt-agent
+        - name: edgex-core-command
+          image: openyurt/core-command:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-command
+              mountPath: /tmp/edgex/secrets/core-command
           ports:
             - protocol: TCP
-              port: 8500
-              targetPort: 8500
-              nodePort: 8500
+              port: 59882
+              targetPort: 59882
           componentEnv:
-            ADD_REGISTRY_ACL_ROLES: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
-            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
+            SERVICE_HOST: edgex-core-command
         - name: edgex-redis
           image: openyurt/redis:6.2.6-alpine
           volumns:
             - name: db-data
-              hostPath: /data
+              hostPath: ""
               mountPath: /data
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: redis-config
-              hostPath: /run/redis/conf
+              hostPath: ""
               mountPath: /run/redis/conf
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
@@ -807,22 +752,22 @@ versions:
           image: openyurt/security-secretstore-setup:2.1.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets
               mountPath: /tmp/edgex/secrets
             - name: kong
-              hostPath: /tmp/kong
+              hostPath: ""
               mountPath: /tmp/kong
             - name: kuiper-sources
-              hostPath: /tmp/kuiper
+              hostPath: ""
               mountPath: /tmp/kuiper
             - name: kuiper-connections
-              hostPath: /tmp/kuiper-connections
+              hostPath: ""
               mountPath: /tmp/kuiper-connections
             - name: vault-config
-              hostPath: /vault/config
+              hostPath: ""
               mountPath: /vault/config
           componentEnv:
             ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],redisdb[device-virtual]
@@ -830,6 +775,61 @@ versions:
             EDGEX_GROUP: "2001"
             EDGEX_USER: "2002"
             SECUREMESSAGEBUS_TYPE: redis
+        - name: edgex-core-metadata
+          image: openyurt/core-metadata:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-metadata
+              mountPath: /tmp/edgex/secrets/core-metadata
+          ports:
+            - protocol: TCP
+              port: 59881
+              targetPort: 59881
+          componentEnv:
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SERVICE_HOST: edgex-core-metadata
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/support-notifications
+              mountPath: /tmp/edgex/secrets/support-notifications
+          ports:
+            - protocol: TCP
+              port: 59860
+              targetPort: 59860
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
+        - name: edgex-support-scheduler
+          image: openyurt/support-scheduler:2.1.1
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/support-scheduler
+              mountPath: /tmp/edgex/secrets/support-scheduler
+          ports:
+            - protocol: TCP
+              port: 59861
+              targetPort: 59861
+          componentEnv:
+            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
+            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
+            SERVICE_HOST: edgex-support-scheduler
+        - name: edgex-ui-go
+          image: openyurt/edgex-ui:2.1.0
+          ports:
+            - protocol: TCP
+              port: 4000
+              targetPort: 4000
+              nodePort: 4000
     - versionName: kamakura
       env:
         API_GATEWAY_HOST: edgex-kong
@@ -865,11 +865,231 @@ versions:
         STAGEGATE_SECRETSTORESETUP_TOKENS_READYPORT: "54322"
         STAGEGATE_WAITFOR_TIMEOUT: 60s
       components:
+        - name: edgex-core-command
+          image: openyurt/core-command:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-command
+              mountPath: /tmp/edgex/secrets/core-command
+          ports:
+            - protocol: TCP
+              port: 59882
+              targetPort: 59882
+          componentEnv:
+            SERVICE_HOST: edgex-core-command
+        - name: edgex-redis
+          image: openyurt/redis:6.2.6-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: redis-config
+              hostPath: ""
+              mountPath: /run/redis/conf
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
+              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
+          componentEnv:
+            DATABASECONFIG_NAME: redis.conf
+            DATABASECONFIG_PATH: /run/redis/conf
+        - name: edgex-security-proxy-setup
+          image: openyurt/security-proxy-setup:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: consul-acl-token
+              hostPath: ""
+              mountPath: /tmp/edgex/secrets/consul-acl-token
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/security-proxy-setup
+              mountPath: /tmp/edgex/secrets/security-proxy-setup
+          componentEnv:
+            ADD_PROXY_ROUTE: ""
+            KONGURL_SERVER: edgex-kong
+            ROUTES_CORE_COMMAND_HOST: edgex-core-command
+            ROUTES_CORE_CONSUL_HOST: edgex-core-consul
+            ROUTES_CORE_DATA_HOST: edgex-core-data
+            ROUTES_CORE_METADATA_HOST: edgex-core-metadata
+            ROUTES_DEVICE_VIRTUAL_HOST: device-virtual
+            ROUTES_RULES_ENGINE_HOST: edgex-kuiper
+            ROUTES_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
+            ROUTES_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
+            ROUTES_SYS_MGMT_AGENT_HOST: edgex-sys-mgmt-agent
+        - name: edgex-core-metadata
+          image: openyurt/core-metadata:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-metadata
+              mountPath: /tmp/edgex/secrets/core-metadata
+          ports:
+            - protocol: TCP
+              port: 59881
+              targetPort: 59881
+          componentEnv:
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SERVICE_HOST: edgex-core-metadata
+        - name: edgex-security-secretstore-setup
+          image: openyurt/security-secretstore-setup:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets
+              mountPath: /tmp/edgex/secrets
+            - name: kong
+              hostPath: ""
+              mountPath: /tmp/kong
+            - name: kuiper-sources
+              hostPath: ""
+              mountPath: /tmp/kuiper
+            - name: kuiper-connections
+              hostPath: ""
+              mountPath: /tmp/kuiper-connections
+            - name: vault-config
+              hostPath: ""
+              mountPath: /vault/config
+          componentEnv:
+            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],redisdb[device-virtual]
+            ADD_SECRETSTORE_TOKENS: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            SECUREMESSAGEBUS_TYPE: redis
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
+              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
+            - name: anonymous-volume2
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-kuiper
+          image: openyurt/ekuiper:1.4.4-alpine
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: kuiper-data
+              hostPath: ""
+              mountPath: /kuiper/data
+            - name: kuiper-connections
+              hostPath: ""
+              mountPath: /kuiper/etc/connections
+            - name: kuiper-sources
+              hostPath: ""
+              mountPath: /kuiper/etc/sources
+          ports:
+            - protocol: TCP
+              port: 59720
+              targetPort: 59720
+          componentEnv:
+            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
+            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
+            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
+            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
+            EDGEX__DEFAULT__PORT: "6379"
+            EDGEX__DEFAULT__PROTOCOL: redis
+            EDGEX__DEFAULT__SERVER: edgex-redis
+            EDGEX__DEFAULT__TOPIC: rules-events
+            EDGEX__DEFAULT__TYPE: redis
+            KUIPER__BASIC__CONSOLELOG: "true"
+            KUIPER__BASIC__RESTPORT: "59720"
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/app-rules-engine
+              mountPath: /tmp/edgex/secrets/app-rules-engine
+          ports:
+            - protocol: TCP
+              port: 59701
+              targetPort: 59701
+          componentEnv:
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
+        - name: edgex-core-consul
+          image: openyurt/consul:1.10.10
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: consul-acl-token
+              hostPath: ""
+              mountPath: /tmp/edgex/secrets/consul-acl-token
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/edgex-consul
+              mountPath: /tmp/edgex/secrets/edgex-consul
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+          componentEnv:
+            ADD_REGISTRY_ACL_ROLES: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
+            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
+        - name: edgex-core-data
+          image: openyurt/core-data:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-data
+              mountPath: /tmp/edgex/secrets/core-data
+          ports:
+            - protocol: TCP
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 59880
+              targetPort: 59880
+          componentEnv:
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/core-data/secrets-token.json
+            SERVICE_HOST: edgex-core-data
         - name: edgex-device-virtual
           image: openyurt/device-virtual:2.2.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/device-virtual
@@ -884,16 +1104,16 @@ versions:
           image: openyurt/kong:2.6.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
               mountPath: /tmp/edgex/secrets/security-proxy-setup
             - name: postgres-config
-              hostPath: /tmp/postgres-config
+              hostPath: ""
               mountPath: /tmp/postgres-config
             - name: kong
-              hostPath: /usr/local/kong
+              hostPath: ""
               mountPath: /usr/local/kong
           ports:
             - protocol: TCP
@@ -921,181 +1141,46 @@ versions:
             KONG_PROXY_ERROR_LOG: /dev/stderr
             KONG_SSL_CIPHER_SUITE: modern
             KONG_STATUS_LISTEN: 0.0.0.0:8100
-        - name: edgex-core-metadata
-          image: openyurt/core-metadata:2.2.0
+        - name: edgex-kong-db
+          image: openyurt/postgres:13.5-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-metadata
-              mountPath: /tmp/edgex/secrets/core-metadata
+            - name: postgres-config
+              hostPath: ""
+              mountPath: /tmp/postgres-config
+            - name: postgres-data
+              hostPath: ""
+              mountPath: /var/lib/postgresql/data
           ports:
             - protocol: TCP
-              port: 59881
-              targetPort: 59881
+              port: 5432
+              targetPort: 5432
           componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SERVICE_HOST: edgex-core-metadata
-        - name: edgex-kuiper
-          image: openyurt/ekuiper:1.4.4-alpine
+            POSTGRES_DB: kong
+            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
+            POSTGRES_USER: kong
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.2.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: kuiper-data
-              hostPath: /kuiper/data
-              mountPath: /kuiper/data
-            - name: kuiper-connections
-              hostPath: /kuiper/etc/connections
-              mountPath: /kuiper/etc/connections
-            - name: kuiper-sources
-              hostPath: /kuiper/etc/sources
-              mountPath: /kuiper/etc/sources
-          ports:
-            - protocol: TCP
-              port: 59720
-              targetPort: 59720
-          componentEnv:
-            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
-            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
-            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
-            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
-            EDGEX__DEFAULT__PORT: "6379"
-            EDGEX__DEFAULT__PROTOCOL: redis
-            EDGEX__DEFAULT__SERVER: edgex-redis
-            EDGEX__DEFAULT__TOPIC: rules-events
-            EDGEX__DEFAULT__TYPE: redis
-            KUIPER__BASIC__CONSOLELOG: "true"
-            KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-security-secretstore-setup
-          image: openyurt/security-secretstore-setup:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets
-              mountPath: /tmp/edgex/secrets
-            - name: kong
-              hostPath: /tmp/kong
-              mountPath: /tmp/kong
-            - name: kuiper-sources
-              hostPath: /tmp/kuiper
-              mountPath: /tmp/kuiper
-            - name: kuiper-connections
-              hostPath: /tmp/kuiper-connections
-              mountPath: /tmp/kuiper-connections
-            - name: vault-config
-              hostPath: /vault/config
-              mountPath: /vault/config
-          componentEnv:
-            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],redisdb[device-virtual]
-            ADD_SECRETSTORE_TOKENS: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            SECUREMESSAGEBUS_TYPE: redis
-        - name: edgex-core-consul
-          image: openyurt/consul:1.10.10
-          volumns:
-            - name: consul-config
-              hostPath: /consul/config
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: /consul/data
-              mountPath: /consul/data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
-              mountPath: /tmp/edgex/secrets/consul-acl-token
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/edgex-consul
-              mountPath: /tmp/edgex/secrets/edgex-consul
+              hostPath: /tmp/edgex/secrets/support-notifications
+              mountPath: /tmp/edgex/secrets/support-notifications
           ports:
             - protocol: TCP
-              port: 8500
-              targetPort: 8500
+              port: 59860
+              targetPort: 59860
           componentEnv:
-            ADD_REGISTRY_ACL_ROLES: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
-            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
-        - name: edgex-redis
-          image: openyurt/redis:6.2.6-alpine
-          volumns:
-            - name: db-data
-              hostPath: /data
-              mountPath: /data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: redis-config
-              hostPath: /run/redis/conf
-              mountPath: /run/redis/conf
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
-              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
-          componentEnv:
-            DATABASECONFIG_NAME: redis.conf
-            DATABASECONFIG_PATH: /run/redis/conf
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-rest
-              mountPath: /tmp/edgex/secrets/device-rest
-          ports:
-            - protocol: TCP
-              port: 59986
-              targetPort: 59986
-          componentEnv:
-            SERVICE_HOST: edgex-device-rest
-        - name: edgex-ui-go
-          image: openyurt/edgex-ui:2.2.0
-          ports:
-            - protocol: TCP
-              port: 4000
-              targetPort: 4000
-              nodePort: 4000
-        - name: edgex-security-proxy-setup
-          image: openyurt/security-proxy-setup:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
-              mountPath: /tmp/edgex/secrets/consul-acl-token
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/security-proxy-setup
-              mountPath: /tmp/edgex/secrets/security-proxy-setup
-          componentEnv:
-            ADD_PROXY_ROUTE: ""
-            KONGURL_SERVER: edgex-kong
-            ROUTES_CORE_COMMAND_HOST: edgex-core-command
-            ROUTES_CORE_CONSUL_HOST: edgex-core-consul
-            ROUTES_CORE_DATA_HOST: edgex-core-data
-            ROUTES_CORE_METADATA_HOST: edgex-core-metadata
-            ROUTES_DEVICE_VIRTUAL_HOST: device-virtual
-            ROUTES_RULES_ENGINE_HOST: edgex-kuiper
-            ROUTES_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
-            ROUTES_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
-            ROUTES_SYS_MGMT_AGENT_HOST: edgex-sys-mgmt-agent
+            SERVICE_HOST: edgex-support-notifications
         - name: edgex-support-scheduler
           image: openyurt/support-scheduler:2.2.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/support-scheduler
@@ -1112,129 +1197,29 @@ versions:
           image: openyurt/security-bootstrapper:2.2.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
           componentEnv:
             EDGEX_GROUP: "2001"
             EDGEX_USER: "2002"
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
-              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
-            - name: anonymous-volume2
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
+        - name: edgex-ui-go
+          image: openyurt/edgex-ui:2.2.0
           ports:
             - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-core-command
-          image: openyurt/core-command:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-command
-              mountPath: /tmp/edgex/secrets/core-command
-          ports:
-            - protocol: TCP
-              port: 59882
-              targetPort: 59882
-          componentEnv:
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-core-data
-          image: openyurt/core-data:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-data
-              mountPath: /tmp/edgex/secrets/core-data
-          ports:
-            - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 59880
-              targetPort: 59880
-          componentEnv:
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/core-data/secrets-token.json
-            SERVICE_HOST: edgex-core-data
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-notifications
-              mountPath: /tmp/edgex/secrets/support-notifications
-          ports:
-            - protocol: TCP
-              port: 59860
-              targetPort: 59860
-          componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.2.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/app-rules-engine
-              mountPath: /tmp/edgex/secrets/app-rules-engine
-          ports:
-            - protocol: TCP
-              port: 59701
-              targetPort: 59701
-          componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-kong-db
-          image: openyurt/postgres:13.5-alpine
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: postgres-config
-              hostPath: /tmp/postgres-config
-              mountPath: /tmp/postgres-config
-            - name: postgres-data
-              hostPath: /var/lib/postgresql/data
-              mountPath: /var/lib/postgresql/data
-          ports:
-            - protocol: TCP
-              port: 5432
-              targetPort: 5432
-          componentEnv:
-            POSTGRES_DB: kong
-            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
-            POSTGRES_USER: kong
+              port: 4000
+              targetPort: 4000
+              nodePort: 4000
         - name: edgex-vault
           image: openyurt/vault:1.8.9
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: vault-file
-              hostPath: /vault/file
+              hostPath: ""
               mountPath: /vault/file
             - name: vault-logs
-              hostPath: /vault/logs
+              hostPath: ""
               mountPath: /vault/logs
           ports:
             - protocol: TCP
@@ -1244,6 +1229,21 @@ versions:
             VAULT_ADDR: http://edgex-vault:8200
             VAULT_CONFIG_DIR: /vault/config
             VAULT_UI: "true"
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.2.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/device-rest
+              mountPath: /tmp/edgex/secrets/device-rest
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
     - versionName: ireland
       env:
         API_GATEWAY_HOST: edgex-kong
@@ -1276,92 +1276,77 @@ versions:
         STAGEGATE_SECRETSTORESETUP_TOKENS_READYPORT: "54322"
         STAGEGATE_WAITFOR_TIMEOUT: 60s
       components:
-        - name: edgex-support-scheduler
-          image: openyurt/support-scheduler:2.0.0
+        - name: edgex-core-consul
+          image: openyurt/consul:1.9.5
           volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
+            - name: consul-acl-token
+              hostPath: ""
+              mountPath: /tmp/edgex/secrets/consul-acl-token
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-scheduler
-              mountPath: /tmp/edgex/secrets/support-scheduler
+              hostPath: /tmp/edgex/secrets/edgex-consul
+              mountPath: /tmp/edgex/secrets/edgex-consul
           ports:
             - protocol: TCP
-              port: 59861
-              targetPort: 59861
+              port: 8500
+              targetPort: 8500
           componentEnv:
-            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
-            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
-            SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.0.0
+            ADD_REGISTRY_ACL_ROLES: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
+            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
+        - name: edgex-device-virtual
+          image: openyurt/device-virtual:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/support-notifications
-              mountPath: /tmp/edgex/secrets/support-notifications
+              hostPath: /tmp/edgex/secrets/device-virtual
+              mountPath: /tmp/edgex/secrets/device-virtual
           ports:
             - protocol: TCP
-              port: 59860
-              targetPort: 59860
+              port: 59900
+              targetPort: 59900
           componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-core-command
-          image: openyurt/core-command:2.0.0
+            SERVICE_HOST: edgex-device-virtual
+        - name: edgex-kong-db
+          image: openyurt/postgres:12.3-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-command
-              mountPath: /tmp/edgex/secrets/core-command
+            - name: postgres-config
+              hostPath: ""
+              mountPath: /tmp/postgres-config
+            - name: postgres-data
+              hostPath: ""
+              mountPath: /var/lib/postgresql/data
           ports:
             - protocol: TCP
-              port: 59882
-              targetPort: 59882
+              port: 5432
+              targetPort: 5432
           componentEnv:
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.0.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-rest
-              mountPath: /tmp/edgex/secrets/device-rest
-          ports:
-            - protocol: TCP
-              port: 59986
-              targetPort: 59986
-          componentEnv:
-            SERVICE_HOST: edgex-device-rest
-        - name: edgex-core-metadata
-          image: openyurt/core-metadata:2.0.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-metadata
-              mountPath: /tmp/edgex/secrets/core-metadata
-          ports:
-            - protocol: TCP
-              port: 59881
-              targetPort: 59881
-          componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SERVICE_HOST: edgex-core-metadata
+            POSTGRES_DB: kong
+            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
+            POSTGRES_USER: kong
         - name: edgex-security-proxy-setup
           image: openyurt/security-proxy-setup:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
+              hostPath: ""
               mountPath: /tmp/edgex/secrets/consul-acl-token
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
@@ -1378,123 +1363,72 @@ versions:
             ROUTES_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
             ROUTES_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
             ROUTES_SYS_MGMT_AGENT_HOST: edgex-sys-mgmt-agent
-        - name: edgex-security-bootstrapper
-          image: openyurt/security-bootstrapper:2.0.0
+        - name: edgex-support-scheduler
+          image: openyurt/support-scheduler:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-          componentEnv:
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.0.1
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/app-rules-engine
-              mountPath: /tmp/edgex/secrets/app-rules-engine
+              hostPath: /tmp/edgex/secrets/support-scheduler
+              mountPath: /tmp/edgex/secrets/support-scheduler
           ports:
             - protocol: TCP
-              port: 59701
-              targetPort: 59701
+              port: 59861
+              targetPort: 59861
           componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-vault
-          image: openyurt/vault:1.7.2
+            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
+            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
+            SERVICE_HOST: edgex-support-scheduler
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: vault-file
-              hostPath: /vault/file
-              mountPath: /vault/file
-            - name: vault-logs
-              hostPath: /vault/logs
-              mountPath: /vault/logs
-          ports:
-            - protocol: TCP
-              port: 8200
-              targetPort: 8200
-          componentEnv:
-            VAULT_ADDR: http://edgex-vault:8200
-            VAULT_CONFIG_DIR: /vault/config
-            VAULT_UI: "true"
-        - name: edgex-core-data
-          image: openyurt/core-data:2.0.0
-          volumns:
-            - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/core-data
-              mountPath: /tmp/edgex/secrets/core-data
+              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
+              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
+            - name: anonymous-volume2
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
           ports:
             - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 59880
-              targetPort: 59880
+              port: 58890
+              targetPort: 58890
           componentEnv:
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/core-data/secrets-token.json
-            SERVICE_HOST: edgex-core-data
-        - name: edgex-redis
-          image: openyurt/redis:6.2.4-alpine
-          volumns:
-            - name: db-data
-              hostPath: /data
-              mountPath: /data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: redis-config
-              hostPath: /run/redis/conf
-              mountPath: /run/redis/conf
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
-              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
-          componentEnv:
-            DATABASECONFIG_NAME: redis.conf
-            DATABASECONFIG_PATH: /run/redis/conf
-        - name: edgex-device-virtual
-          image: openyurt/device-virtual:2.0.0
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-core-command
+          image: openyurt/core-command:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/device-virtual
-              mountPath: /tmp/edgex/secrets/device-virtual
+              hostPath: /tmp/edgex/secrets/core-command
+              mountPath: /tmp/edgex/secrets/core-command
           ports:
             - protocol: TCP
-              port: 59900
-              targetPort: 59900
+              port: 59882
+              targetPort: 59882
           componentEnv:
-            SERVICE_HOST: edgex-device-virtual
+            SERVICE_HOST: edgex-core-command
         - name: edgex-kong
           image: openyurt/kong:2.4.1-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/security-proxy-setup
               mountPath: /tmp/edgex/secrets/security-proxy-setup
             - name: postgres-config
-              hostPath: /tmp/postgres-config
+              hostPath: ""
               mountPath: /tmp/postgres-config
             - name: kong
-              hostPath: /usr/local/kong
+              hostPath: ""
               mountPath: /usr/local/kong
           ports:
             - protocol: TCP
@@ -1520,37 +1454,90 @@ versions:
             KONG_PROXY_ACCESS_LOG: /dev/stdout
             KONG_PROXY_ERROR_LOG: /dev/stderr
             KONG_STATUS_LISTEN: 0.0.0.0:8100
-        - name: edgex-kong-db
-          image: openyurt/postgres:12.3-alpine
+        - name: edgex-security-secretstore-setup
+          image: openyurt/security-secretstore-setup:2.0.0
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
-            - name: postgres-config
-              hostPath: /tmp/postgres-config
-              mountPath: /tmp/postgres-config
-            - name: postgres-data
-              hostPath: /var/lib/postgresql/data
-              mountPath: /var/lib/postgresql/data
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets
+              mountPath: /tmp/edgex/secrets
+            - name: kong
+              hostPath: ""
+              mountPath: /tmp/kong
+            - name: kuiper-config
+              hostPath: ""
+              mountPath: /tmp/kuiper
+            - name: vault-config
+              hostPath: ""
+              mountPath: /vault/config
+          componentEnv:
+            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],redisdb[device-virtual]
+            ADD_SECRETSTORE_TOKENS: ""
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+            SECUREMESSAGEBUS_TYPE: redis
+        - name: edgex-core-data
+          image: openyurt/core-data:2.0.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-data
+              mountPath: /tmp/edgex/secrets/core-data
           ports:
             - protocol: TCP
-              port: 5432
-              targetPort: 5432
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 59880
+              targetPort: 59880
           componentEnv:
-            POSTGRES_DB: kong
-            POSTGRES_PASSWORD_FILE: /tmp/postgres-config/.pgpassword
-            POSTGRES_USER: kong
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/core-data/secrets-token.json
+            SERVICE_HOST: edgex-core-data
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.0.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/device-rest
+              mountPath: /tmp/edgex/secrets/device-rest
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.0.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/support-notifications
+              mountPath: /tmp/edgex/secrets/support-notifications
+          ports:
+            - protocol: TCP
+              port: 59860
+              targetPort: 59860
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
         - name: edgex-kuiper
           image: openyurt/ekuiper:1.3.0-alpine
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: kuiper-data
-              hostPath: /kuiper/data
+              hostPath: ""
               mountPath: /kuiper/data
             - name: kuiper-config
-              hostPath: /kuiper/etc/sources
+              hostPath: ""
               mountPath: /kuiper/etc/sources
           ports:
             - protocol: TCP
@@ -1564,78 +1551,91 @@ versions:
             EDGEX__DEFAULT__TYPE: redis
             KUIPER__BASIC__CONSOLELOG: "true"
             KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-security-secretstore-setup
-          image: openyurt/security-secretstore-setup:2.0.0
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.0.1
           volumns:
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets
-              mountPath: /tmp/edgex/secrets
-            - name: kong
-              hostPath: /tmp/kong
-              mountPath: /tmp/kong
-            - name: kuiper-config
-              hostPath: /tmp/kuiper
-              mountPath: /tmp/kuiper
-            - name: vault-config
-              hostPath: /vault/config
-              mountPath: /vault/config
-          componentEnv:
-            ADD_KNOWN_SECRETS: redisdb[app-rules-engine],redisdb[device-rest],redisdb[device-virtual]
-            ADD_SECRETSTORE_TOKENS: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            SECUREMESSAGEBUS_TYPE: redis
-        - name: edgex-core-consul
-          image: openyurt/consul:1.9.5
-          volumns:
-            - name: consul-config
-              hostPath: /consul/config
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: /consul/data
-              mountPath: /consul/data
-            - name: edgex-init
-              hostPath: /edgex-init
-              mountPath: /edgex-init
-            - name: consul-acl-token
-              hostPath: /tmp/edgex/secrets/consul-acl-token
-              mountPath: /tmp/edgex/secrets/consul-acl-token
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/edgex-consul
-              mountPath: /tmp/edgex/secrets/edgex-consul
+              hostPath: /tmp/edgex/secrets/app-rules-engine
+              mountPath: /tmp/edgex/secrets/app-rules-engine
           ports:
             - protocol: TCP
-              port: 8500
-              targetPort: 8500
+              port: 59701
+              targetPort: 59701
           componentEnv:
-            ADD_REGISTRY_ACL_ROLES: ""
-            EDGEX_GROUP: "2001"
-            EDGEX_USER: "2002"
-            STAGEGATE_REGISTRY_ACL_BOOTSTRAPTOKENPATH: /tmp/edgex/secrets/consul-acl-token/bootstrap_token.json
-            STAGEGATE_REGISTRY_ACL_SENTINELFILEPATH: /consul/config/consul_acl_done
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.0.0
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
+        - name: edgex-redis
+          image: openyurt/redis:6.2.4-alpine
           volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
             - name: edgex-init
-              hostPath: /edgex-init
+              hostPath: ""
               mountPath: /edgex-init
+            - name: redis-config
+              hostPath: ""
+              mountPath: /run/redis/conf
             - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/sys-mgmt-agent
-              mountPath: /tmp/edgex/secrets/sys-mgmt-agent
-            - name: anonymous-volume2
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
+              hostPath: /tmp/edgex/secrets/security-bootstrapper-redis
+              mountPath: /tmp/edgex/secrets/security-bootstrapper-redis
           ports:
             - protocol: TCP
-              port: 58890
-              targetPort: 58890
+              port: 6379
+              targetPort: 6379
           componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
+            DATABASECONFIG_NAME: redis.conf
+            DATABASECONFIG_PATH: /run/redis/conf
+        - name: edgex-core-metadata
+          image: openyurt/core-metadata:2.0.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/core-metadata
+              mountPath: /tmp/edgex/secrets/core-metadata
+          ports:
+            - protocol: TCP
+              port: 59881
+              targetPort: 59881
+          componentEnv:
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SERVICE_HOST: edgex-core-metadata
+        - name: edgex-security-bootstrapper
+          image: openyurt/security-bootstrapper:2.0.0
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+          componentEnv:
+            EDGEX_GROUP: "2001"
+            EDGEX_USER: "2002"
+        - name: edgex-vault
+          image: openyurt/vault:1.7.2
+          volumns:
+            - name: edgex-init
+              hostPath: ""
+              mountPath: /edgex-init
+            - name: vault-file
+              hostPath: ""
+              mountPath: /vault/file
+            - name: vault-logs
+              hostPath: ""
+              mountPath: /vault/logs
+          ports:
+            - protocol: TCP
+              port: 8200
+              targetPort: 8200
+          componentEnv:
+            VAULT_ADDR: http://edgex-vault:8200
+            VAULT_CONFIG_DIR: /vault/config
+            VAULT_UI: "true"
     - versionName: hanoi
       env:
         CLIENTS_COMMAND_HOST: edgex-core-command
@@ -1653,33 +1653,140 @@ versions:
         SECRETSTORE_ROOTCACERTPATH: /tmp/edgex/secrets/ca/ca.pem
         SECRETSTORE_SERVERNAME: edgex-vault
       components:
-        - name: edgex-core-command
-          image: openyurt/docker-core-command-go:1.3.1
+        - name: edgex-redis
+          image: openyurt/redis:6.0.9-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
+        - name: edgex-device-virtual
+          image: openyurt/docker-device-virtual-go:1.3.1
+          ports:
+            - protocol: TCP
+              port: 49990
+              targetPort: 49990
+          componentEnv:
+            SERVICE_HOST: edgex-device-virtual
+        - name: edgex-core-metadata
+          image: openyurt/docker-core-metadata-go:1.3.1
           volumns:
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/ca
               mountPath: /tmp/edgex/secrets/ca
             - name: anonymous-volume2
-              hostPath: /tmp/edgex/secrets/edgex-core-command
-              mountPath: /tmp/edgex/secrets/edgex-core-command
+              hostPath: /tmp/edgex/secrets/edgex-core-metadata
+              mountPath: /tmp/edgex/secrets/edgex-core-metadata
           ports:
             - protocol: TCP
-              port: 48082
-              targetPort: 48082
+              port: 48081
+              targetPort: 48081
           componentEnv:
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-command/secrets-token.json
-            SERVICE_HOST: edgex-core-command
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-metadata/secrets-token.json
+            SERVICE_HOST: edgex-core-metadata
+        - name: edgex-security-bootstrap-database
+          image: openyurt/docker-security-bootstrap-redis-go:1.3.1
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/ca
+              mountPath: /tmp/edgex/secrets/ca
+            - name: anonymous-volume2
+              hostPath: /tmp/edgex/secrets/edgex-security-bootstrap-redis
+              mountPath: /tmp/edgex/secrets/edgex-security-bootstrap-redis
+          componentEnv:
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-security-bootstrap-redis/secrets-token.json
+            SERVICE_HOST: edgex-security-bootstrap-database
+        - name: edgex-vault-worker
+          image: openyurt/docker-security-secretstore-setup-go:1.3.1
+          volumns:
+            - name: consul-scripts
+              hostPath: ""
+              mountPath: /consul/scripts
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets
+              mountPath: /tmp/edgex/secrets
+            - name: vault-config
+              hostPath: ""
+              mountPath: /vault/config
+          componentEnv:
+            SECRETSTORE_SETUP_DONE_FLAG: /tmp/edgex/secrets/edgex-consul/.secretstore-setup-done
+        - name: edgex-app-service-configurable-rules
+          image: openyurt/docker-app-service-configurable:1.3.1
+          ports:
+            - protocol: TCP
+              port: 48100
+              targetPort: 48100
+          componentEnv:
+            BINDING_PUBLISHTOPIC: events
+            EDGEX_PROFILE: rules-engine
+            MESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-core-data
+            SERVICE_HOST: edgex-app-service-configurable-rules
+            SERVICE_PORT: "48100"
+        - name: edgex-kuiper
+          image: openyurt/kuiper:1.1.1-alpine
+          ports:
+            - protocol: TCP
+              port: 20498
+              targetPort: 20498
+            - protocol: TCP
+              port: 48075
+              targetPort: 48075
+          componentEnv:
+            EDGEX__DEFAULT__PORT: "5566"
+            EDGEX__DEFAULT__PROTOCOL: tcp
+            EDGEX__DEFAULT__SERVER: edgex-app-service-configurable-rules
+            EDGEX__DEFAULT__SERVICESERVER: http://edgex-core-data:48080
+            EDGEX__DEFAULT__TOPIC: events
+            KUIPER__BASIC__CONSOLELOG: "true"
+            KUIPER__BASIC__RESTPORT: "48075"
+        - name: edgex-vault
+          image: openyurt/vault:1.5.3
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/edgex-vault
+              mountPath: /tmp/edgex/secrets/edgex-vault
+            - name: vault-file
+              hostPath: ""
+              mountPath: /vault/file
+            - name: vault-init
+              hostPath: ""
+              mountPath: /vault/init
+            - name: vault-logs
+              hostPath: ""
+              mountPath: /vault/logs
+          ports:
+            - protocol: TCP
+              port: 8200
+              targetPort: 8200
+          componentEnv:
+            VAULT_ADDR: https://edgex-vault:8200
+            VAULT_CONFIG_DIR: /vault/config
+            VAULT_UI: "true"
+        - name: kong-migrations
+          image: openyurt/kong:2.0.5
+          volumns:
+            - name: consul-scripts
+              hostPath: ""
+              mountPath: /consul/scripts
+          componentEnv:
+            KONG_DATABASE: postgres
+            KONG_PG_HOST: kong-db
+            KONG_PG_PASSWORD: kong
         - name: edgex-core-consul
           image: openyurt/docker-edgex-consul:1.3.0
           volumns:
             - name: consul-config
-              hostPath: /consul/config
+              hostPath: ""
               mountPath: /consul/config
             - name: consul-data
-              hostPath: /consul/data
+              hostPath: ""
               mountPath: /consul/data
             - name: consul-scripts
-              hostPath: /consul/scripts
+              hostPath: ""
               mountPath: /consul/scripts
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/ca
@@ -1709,57 +1816,11 @@ versions:
               targetPort: 49986
           componentEnv:
             SERVICE_HOST: edgex-device-rest
-        - name: edgex-device-virtual
-          image: openyurt/docker-device-virtual-go:1.3.1
-          ports:
-            - protocol: TCP
-              port: 49990
-              targetPort: 49990
-          componentEnv:
-            SERVICE_HOST: edgex-device-virtual
-        - name: edgex-secrets-setup
-          image: openyurt/docker-security-secrets-setup-go:1.3.1
-          volumns:
-            - name: secrets-setup-cache
-              hostPath: /etc/edgex/pki
-              mountPath: /etc/edgex/pki
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets
-              mountPath: /tmp/edgex/secrets
-            - name: vault-init
-              hostPath: /vault/init
-              mountPath: /vault/init
-        - name: edgex-vault-worker
-          image: openyurt/docker-security-secretstore-setup-go:1.3.1
-          volumns:
-            - name: consul-scripts
-              hostPath: /consul/scripts
-              mountPath: /consul/scripts
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets
-              mountPath: /tmp/edgex/secrets
-            - name: vault-config
-              hostPath: /vault/config
-              mountPath: /vault/config
-          componentEnv:
-            SECRETSTORE_SETUP_DONE_FLAG: /tmp/edgex/secrets/edgex-consul/.secretstore-setup-done
-        - name: edgex-app-service-configurable-rules
-          image: openyurt/docker-app-service-configurable:1.3.1
-          ports:
-            - protocol: TCP
-              port: 48100
-              targetPort: 48100
-          componentEnv:
-            BINDING_PUBLISHTOPIC: events
-            EDGEX_PROFILE: rules-engine
-            MESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-core-data
-            SERVICE_HOST: edgex-app-service-configurable-rules
-            SERVICE_PORT: "48100"
         - name: edgex-proxy
           image: openyurt/docker-security-proxy-setup-go:1.3.1
           volumns:
             - name: consul-scripts
-              hostPath: /consul/scripts
+              hostPath: ""
               mountPath: /consul/scripts
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/ca
@@ -1773,34 +1834,20 @@ versions:
             SECRETSERVICE_SERVER: edgex-vault
             SECRETSERVICE_SNIS: edgex-kong
             SECRETSERVICE_TOKENPATH: /tmp/edgex/secrets/edgex-security-proxy-setup/secrets-token.json
-        - name: kong-migrations
-          image: openyurt/kong:2.0.5
+        - name: kong-db
+          image: openyurt/postgres:12.3-alpine
           volumns:
-            - name: consul-scripts
-              hostPath: /consul/scripts
-              mountPath: /consul/scripts
-          componentEnv:
-            KONG_DATABASE: postgres
-            KONG_PG_HOST: kong-db
-            KONG_PG_PASSWORD: kong
-        - name: edgex-support-scheduler
-          image: openyurt/docker-support-scheduler-go:1.3.1
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/ca
-              mountPath: /tmp/edgex/secrets/ca
-            - name: anonymous-volume2
-              hostPath: /tmp/edgex/secrets/edgex-support-scheduler
-              mountPath: /tmp/edgex/secrets/edgex-support-scheduler
+            - name: postgres-data
+              hostPath: ""
+              mountPath: /var/lib/postgresql/data
           ports:
             - protocol: TCP
-              port: 48085
-              targetPort: 48085
+              port: 5432
+              targetPort: 5432
           componentEnv:
-            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
-            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-support-scheduler/secrets-token.json
-            SERVICE_HOST: edgex-support-scheduler
+            POSTGRES_DB: kong
+            POSTGRES_PASSWORD: kong
+            POSTGRES_USER: kong
         - name: edgex-sys-mgmt-agent
           image: openyurt/docker-sys-mgmt-agent-go:1.3.1
           volumns:
@@ -1815,109 +1862,30 @@ versions:
             EXECUTORPATH: /sys-mgmt-executor
             METRICSMECHANISM: executor
             SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-vault
-          image: openyurt/vault:1.5.3
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/edgex-vault
-              mountPath: /tmp/edgex/secrets/edgex-vault
-            - name: vault-file
-              hostPath: /vault/file
-              mountPath: /vault/file
-            - name: vault-init
-              hostPath: /vault/init
-              mountPath: /vault/init
-            - name: vault-logs
-              hostPath: /vault/logs
-              mountPath: /vault/logs
-          ports:
-            - protocol: TCP
-              port: 8200
-              targetPort: 8200
-          componentEnv:
-            VAULT_ADDR: https://edgex-vault:8200
-            VAULT_CONFIG_DIR: /vault/config
-            VAULT_UI: "true"
-        - name: edgex-core-data
-          image: openyurt/docker-core-data-go:1.3.1
+        - name: edgex-core-command
+          image: openyurt/docker-core-command-go:1.3.1
           volumns:
             - name: anonymous-volume1
               hostPath: /tmp/edgex/secrets/ca
               mountPath: /tmp/edgex/secrets/ca
             - name: anonymous-volume2
-              hostPath: /tmp/edgex/secrets/edgex-core-data
-              mountPath: /tmp/edgex/secrets/edgex-core-data
+              hostPath: /tmp/edgex/secrets/edgex-core-command
+              mountPath: /tmp/edgex/secrets/edgex-core-command
           ports:
             - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 48080
-              targetPort: 48080
+              port: 48082
+              targetPort: 48082
           componentEnv:
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-data/secrets-token.json
-            SERVICE_HOST: edgex-core-data
-        - name: kong-db
-          image: openyurt/postgres:12.3-alpine
-          volumns:
-            - name: postgres-data
-              hostPath: /var/lib/postgresql/data
-              mountPath: /var/lib/postgresql/data
-          ports:
-            - protocol: TCP
-              port: 5432
-              targetPort: 5432
-          componentEnv:
-            POSTGRES_DB: kong
-            POSTGRES_PASSWORD: kong
-            POSTGRES_USER: kong
-        - name: edgex-kuiper
-          image: openyurt/kuiper:1.1.1-alpine
-          ports:
-            - protocol: TCP
-              port: 20498
-              targetPort: 20498
-            - protocol: TCP
-              port: 48075
-              targetPort: 48075
-          componentEnv:
-            EDGEX__DEFAULT__PORT: "5566"
-            EDGEX__DEFAULT__PROTOCOL: tcp
-            EDGEX__DEFAULT__SERVER: edgex-app-service-configurable-rules
-            EDGEX__DEFAULT__SERVICESERVER: http://edgex-core-data:48080
-            EDGEX__DEFAULT__TOPIC: events
-            KUIPER__BASIC__CONSOLELOG: "true"
-            KUIPER__BASIC__RESTPORT: "48075"
-        - name: edgex-security-bootstrap-database
-          image: openyurt/docker-security-bootstrap-redis-go:1.3.1
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/ca
-              mountPath: /tmp/edgex/secrets/ca
-            - name: anonymous-volume2
-              hostPath: /tmp/edgex/secrets/edgex-security-bootstrap-redis
-              mountPath: /tmp/edgex/secrets/edgex-security-bootstrap-redis
-          componentEnv:
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-security-bootstrap-redis/secrets-token.json
-            SERVICE_HOST: edgex-security-bootstrap-database
-        - name: edgex-redis
-          image: openyurt/redis:6.0.9-alpine
-          volumns:
-            - name: db-data
-              hostPath: /data
-              mountPath: /data
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-command/secrets-token.json
+            SERVICE_HOST: edgex-core-command
         - name: kong
           image: openyurt/kong:2.0.5
           volumns:
             - name: consul-scripts
-              hostPath: /consul/scripts
+              hostPath: ""
               mountPath: /consul/scripts
             - name: kong
-              hostPath: /usr/local/kong
+              hostPath: ""
               mountPath: /usr/local/kong
           ports:
             - protocol: TCP
@@ -1943,23 +1911,6 @@ versions:
             KONG_PG_PASSWORD: kong
             KONG_PROXY_ACCESS_LOG: /dev/stdout
             KONG_PROXY_ERROR_LOG: /dev/stderr
-        - name: edgex-core-metadata
-          image: openyurt/docker-core-metadata-go:1.3.1
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /tmp/edgex/secrets/ca
-              mountPath: /tmp/edgex/secrets/ca
-            - name: anonymous-volume2
-              hostPath: /tmp/edgex/secrets/edgex-core-metadata
-              mountPath: /tmp/edgex/secrets/edgex-core-metadata
-          ports:
-            - protocol: TCP
-              port: 48081
-              targetPort: 48081
-          componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-metadata/secrets-token.json
-            SERVICE_HOST: edgex-core-metadata
         - name: edgex-support-notifications
           image: openyurt/docker-support-notifications-go:1.3.1
           volumns:
@@ -1976,3 +1927,52 @@ versions:
           componentEnv:
             SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-support-notifications/secrets-token.json
             SERVICE_HOST: edgex-support-notifications
+        - name: edgex-support-scheduler
+          image: openyurt/docker-support-scheduler-go:1.3.1
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/ca
+              mountPath: /tmp/edgex/secrets/ca
+            - name: anonymous-volume2
+              hostPath: /tmp/edgex/secrets/edgex-support-scheduler
+              mountPath: /tmp/edgex/secrets/edgex-support-scheduler
+          ports:
+            - protocol: TCP
+              port: 48085
+              targetPort: 48085
+          componentEnv:
+            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
+            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-support-scheduler/secrets-token.json
+            SERVICE_HOST: edgex-support-scheduler
+        - name: edgex-secrets-setup
+          image: openyurt/docker-security-secrets-setup-go:1.3.1
+          volumns:
+            - name: secrets-setup-cache
+              hostPath: ""
+              mountPath: /etc/edgex/pki
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets
+              mountPath: /tmp/edgex/secrets
+            - name: vault-init
+              hostPath: ""
+              mountPath: /vault/init
+        - name: edgex-core-data
+          image: openyurt/docker-core-data-go:1.3.1
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /tmp/edgex/secrets/ca
+              mountPath: /tmp/edgex/secrets/ca
+            - name: anonymous-volume2
+              hostPath: /tmp/edgex/secrets/edgex-core-data
+              mountPath: /tmp/edgex/secrets/edgex-core-data
+          ports:
+            - protocol: TCP
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 48080
+              targetPort: 48080
+          componentEnv:
+            SECRETSTORE_TOKENFILE: /tmp/edgex/secrets/edgex-core-data/secrets-token.json
+            SERVICE_HOST: edgex-core-data

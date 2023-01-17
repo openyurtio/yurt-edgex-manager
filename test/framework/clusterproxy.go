@@ -29,6 +29,7 @@ import (
 
 	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	devicev1alpha2 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -84,6 +85,7 @@ func NewClusterProxy(kubeconfigPath string) ClusterProxy {
 	_ = unitv1alpha1.AddToScheme(scheme)
 
 	_ = devicev1alpha1.AddToScheme(scheme)
+	_ = devicev1alpha2.AddToScheme(scheme)
 
 	proxy := &clusterProxy{
 		kubeconfigPath: kubeconfigPath,

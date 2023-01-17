@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,6 +38,21 @@ func RegisterFieldIndexers(fi client.FieldIndexer) error {
 		// register the fieldIndexer for device
 		if err = fi.IndexField(context.TODO(), &v1alpha1.EdgeX{}, IndexerPathForNodepool, func(rawObj client.Object) []string {
 			edgex, ok := rawObj.(*v1alpha1.EdgeX)
+			if ok {
+				return []string{edgex.Spec.PoolName}
+			}
+			return []string{}
+		}); err != nil {
+			return
+		}
+	})
+	if err != nil {
+		return err
+	}
+	registerOnce.Do(func() {
+		// register the fieldIndexer for device
+		if err = fi.IndexField(context.TODO(), &v1alpha2.EdgeX{}, IndexerPathForNodepool, func(rawObj client.Object) []string {
+			edgex, ok := rawObj.(*v1alpha2.EdgeX)
 			if ok {
 				return []string{edgex.Spec.PoolName}
 			}

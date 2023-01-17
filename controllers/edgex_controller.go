@@ -19,16 +19,20 @@ package controllers
 import (
 	"context"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	devicev1alpha2 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -51,12 +56,15 @@ const (
 
 	AnnotationServiceTopologyKey           = "openyurt.io/topologyKeys"
 	AnnotationServiceTopologyValueNodePool = "openyurt.io/nodepool"
+
+	ConfigMapName = "common-variables"
 )
 
 var (
-	ControlledType     = &devicev1alpha1.EdgeX{}
+	ControlledType     = &devicev1alpha2.EdgeX{}
 	ControlledTypeName = reflect.TypeOf(ControlledType).Elem().Name()
 	ControlledTypeGVK  = devicev1alpha1.GroupVersion.WithKind(ControlledTypeName)
+	HostPathType       = corev1.HostPathDirectoryOrCreate
 )
 
 // EdgeXReconciler reconciles a EdgeX object
@@ -65,10 +73,42 @@ type EdgeXReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+type EdgeXConfig struct {
+	Versions []Version `yaml:"versions"`
+}
+type Version struct {
+	Name       string            `yaml:"versionName"`
+	Env        map[string]string `yaml:"env,omitempty"`
+	Components []Component       `yaml:"components,omitempty"`
+}
+type Component struct {
+	Name         string            `yaml:"name"`
+	Image        string            `yaml:"image"`
+	Volumes      []Volume          `yaml:"volumns,omitempty"`
+	Ports        []Port            `yaml:"ports,omitempty"`
+	ComponentEnv map[string]string `yaml:"componentEnv,omitempty"`
+	// A pointer to the Env of the previous level
+	envRef *map[string]string
+}
+
+type Volume struct {
+	Name      string `yaml:"name"`
+	HostPath  string `yaml:"hostPath"`
+	MountPath string `yaml:"mountPath"`
+}
+
+type Port struct {
+	Protocol   string `yaml:"protocol"`
+	Port       int32  `yaml:"port"`
+	TargetPort int32  `yaml:"targetPort"`
+	NodePort   int32  `yaml:"nodePort,omitempty"`
+}
+
 var (
-	CoreDeployment map[string][]devicev1alpha1.DeploymentTemplateSpec = make(map[string][]devicev1alpha1.DeploymentTemplateSpec)
-	CoreServices   map[string][]devicev1alpha1.ServiceTemplateSpec    = make(map[string][]devicev1alpha1.ServiceTemplateSpec)
-	CoreConfigMap  map[string]corev1.ConfigMap                        = make(map[string]corev1.ConfigMap)
+	SecurityComponents map[string][]Component       = make(map[string][]Component)
+	NoSectyComponents  map[string][]Component       = make(map[string][]Component)
+	SecurityEnv        map[string]map[string]string = make(map[string]map[string]string)
+	NoSectyEnv         map[string]map[string]string = make(map[string]map[string]string)
 )
 
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes,verbs=get;list;watch;create;update;patch;delete
@@ -83,7 +123,7 @@ var (
 func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 
-	edgex := &devicev1alpha1.EdgeX{}
+	edgex := &devicev1alpha2.EdgeX{}
 	if err := r.Get(ctx, req.NamespacedName, edgex); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -108,9 +148,8 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		// always update the readyCondition.
 		conditions.SetSummary(edgex,
 			conditions.WithConditions(
-				devicev1alpha1.ConfigmapAvailableCondition,
-				devicev1alpha1.DeploymentAvailableCondition,
-				devicev1alpha1.ServiceAvailableCondition,
+				devicev1alpha2.ConfigmapAvailableCondition,
+				devicev1alpha2.ComponentAvailableCondition,
 			),
 		)
 
@@ -132,15 +171,21 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	return r.reconcileNormal(ctx, edgex)
 }
 
-func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1alpha1.EdgeX) (ctrl.Result, error) {
+func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1alpha2.EdgeX) (ctrl.Result, error) {
 
 	ud := &unitv1alpha1.YurtAppSet{}
-	desiredeployments := append(CoreDeployment[edgex.Spec.Version], edgex.Spec.AdditionalDeployment...)
-	for _, dd := range desiredeployments {
+	var desiredComponents []Component
+	if edgex.Spec.Security {
+		desiredComponents = SecurityComponents[edgex.Spec.Version]
+	} else {
+		desiredComponents = NoSectyComponents[edgex.Spec.Version]
+	}
+	//TODO: handle edgex.Spec.Components
 
+	for _, dc := range desiredComponents {
 		if err := r.Get(
 			ctx,
-			types.NamespacedName{Namespace: edgex.Namespace, Name: dd.Name},
+			types.NamespacedName{Namespace: edgex.Namespace, Name: dc.Name},
 			ud); err != nil {
 			continue
 		}
@@ -156,55 +201,44 @@ func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1al
 		}
 	}
 
-	controllerutil.RemoveFinalizer(edgex, devicev1alpha1.EdgexFinalizer)
+	controllerutil.RemoveFinalizer(edgex, devicev1alpha2.EdgexFinalizer)
 
 	return ctrl.Result{}, nil
 }
 
-func (r *EdgeXReconciler) reconcileNormal(ctx context.Context, edgex *devicev1alpha1.EdgeX) (ctrl.Result, error) {
-	controllerutil.AddFinalizer(edgex, devicev1alpha1.EdgexFinalizer)
+func (r *EdgeXReconciler) reconcileNormal(ctx context.Context, edgex *devicev1alpha2.EdgeX) (ctrl.Result, error) {
+	controllerutil.AddFinalizer(edgex, devicev1alpha2.EdgexFinalizer)
 
 	edgex.Status.Initialized = true
 
 	if ok, err := r.reconcileConfigmap(ctx, edgex); !ok {
 		if err != nil {
-			conditions.MarkFalse(edgex, devicev1alpha1.ConfigmapAvailableCondition, devicev1alpha1.ConfigmapProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
+			conditions.MarkFalse(edgex, devicev1alpha2.ConfigmapAvailableCondition, devicev1alpha2.ConfigmapProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
 			return ctrl.Result{}, errors.Wrapf(err,
 				"unexpected error while reconciling configmap for %s", edgex.Namespace+"/"+edgex.Name)
 		}
-		conditions.MarkFalse(edgex, devicev1alpha1.ConfigmapAvailableCondition, devicev1alpha1.ConfigmapProvisioningReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(edgex, devicev1alpha2.ConfigmapAvailableCondition, devicev1alpha2.ConfigmapProvisioningReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	conditions.MarkTrue(edgex, devicev1alpha1.ConfigmapAvailableCondition)
+	conditions.MarkTrue(edgex, devicev1alpha2.ConfigmapAvailableCondition)
 
-	if ok, err := r.reconcileService(ctx, edgex); !ok {
+	if ok, err := r.reconcileComponent(ctx, edgex); !ok {
 		if err != nil {
-			conditions.MarkFalse(edgex, devicev1alpha1.ServiceAvailableCondition, devicev1alpha1.ServiceProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
+			conditions.MarkFalse(edgex, devicev1alpha2.ComponentAvailableCondition, devicev1alpha2.ComponentProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
 			return ctrl.Result{}, errors.Wrapf(err,
-				"unexpected error while reconciling Service for %s", edgex.Namespace+"/"+edgex.Name)
+				"unexpected error while reconciling Component for %s", edgex.Namespace+"/"+edgex.Name)
 		}
-		conditions.MarkFalse(edgex, devicev1alpha1.ServiceAvailableCondition, devicev1alpha1.ServiceProvisioningReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(edgex, devicev1alpha2.ComponentAvailableCondition, devicev1alpha2.ComponentProvisioningReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	conditions.MarkTrue(edgex, devicev1alpha1.ServiceAvailableCondition)
-
-	if ok, err := r.reconcileDeployment(ctx, edgex); !ok {
-		if err != nil {
-			conditions.MarkFalse(edgex, devicev1alpha1.DeploymentAvailableCondition, devicev1alpha1.DeploymentProvisioningFailedReason, clusterv1.ConditionSeverityWarning, err.Error())
-			return ctrl.Result{}, errors.Wrapf(err,
-				"unexpected error while reconciling deployment for %s", edgex.Namespace+"/"+edgex.Name)
-		}
-		conditions.MarkFalse(edgex, devicev1alpha1.DeploymentAvailableCondition, devicev1alpha1.DeploymentProvisioningReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-	conditions.MarkTrue(edgex, devicev1alpha1.DeploymentAvailableCondition)
+	conditions.MarkTrue(edgex, devicev1alpha2.ComponentAvailableCondition)
 
 	edgex.Status.Ready = true
 
 	return ctrl.Result{}, nil
 }
 
-func (r *EdgeXReconciler) removeOwner(ctx context.Context, edgex *devicev1alpha1.EdgeX, obj client.Object) error {
+func (r *EdgeXReconciler) removeOwner(ctx context.Context, edgex *devicev1alpha2.EdgeX, obj client.Object) error {
 	owners := obj.GetOwnerReferences()
 	for i, owner := range owners {
 		if owner.UID == edgex.UID {
@@ -222,20 +256,24 @@ func (r *EdgeXReconciler) removeOwner(ctx context.Context, edgex *devicev1alpha1
 	return nil
 }
 
-func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
+func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev1alpha2.EdgeX) (bool, error) {
 	configmap := &corev1.ConfigMap{}
-
-	if _, ok := CoreConfigMap[edgex.Spec.Version]; ok {
-
+	var env map[string]string
+	if edgex.Spec.Security {
+		env = SecurityEnv[edgex.Spec.Version]
+	} else {
+		env = NoSectyEnv[edgex.Spec.Version]
+	}
+	if env != nil {
 		configmap.ObjectMeta = metav1.ObjectMeta{
 			Labels:    make(map[string]string),
-			Name:      CoreConfigMap[edgex.Spec.Version].Name,
+			Name:      ConfigMapName + "-" + edgex.Spec.Version,
 			Namespace: edgex.Namespace,
 		}
 		configmap.Data = make(map[string]string)
-		configmap.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelConfigmap
+		configmap.Labels[devicev1alpha2.LabelEdgeXGenerate] = LabelConfigmap
 
-		for k, v := range CoreConfigMap[edgex.Spec.Version].Data {
+		for k, v := range env {
 			configmap.Data[k] = v
 		}
 
@@ -249,7 +287,7 @@ func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev
 	}
 
 	configmaplist := &corev1.ConfigMapList{}
-	if err := r.List(ctx, configmaplist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelConfigmap}); err == nil {
+	if err := r.List(ctx, configmaplist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha2.LabelEdgeXGenerate: LabelConfigmap}); err == nil {
 		for _, c := range configmaplist.Items {
 			if c.Name == configmap.Name {
 				continue
@@ -261,159 +299,85 @@ func (r *EdgeXReconciler) reconcileConfigmap(ctx context.Context, edgex *devicev
 	return true, nil
 }
 
-func (r *EdgeXReconciler) reconcileService(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
-	desireservices := make(map[string]devicev1alpha1.ServiceTemplateSpec)
-	needservices := make(map[string]bool)
-	var readyservice int32
+func (r *EdgeXReconciler) reconcileComponent(ctx context.Context, edgex *devicev1alpha2.EdgeX) (bool, error) {
+	var desirecomponents []Component
+	needcomponents := make(map[string]bool)
+	var readycomponent int32
 
-	for _, coreservice := range CoreServices[edgex.Spec.Version] {
-		desireservices[coreservice.Name] = coreservice
+	efs := corev1.EnvFromSource{
+		ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: ConfigMapName + "-" + edgex.Spec.Version,
+			},
+		},
 	}
-	for _, addservice := range edgex.Spec.AdditionalService {
-		desireservices[addservice.Name] = addservice
+
+	if edgex.Spec.Security {
+		desirecomponents = SecurityComponents[edgex.Spec.Version]
+	} else {
+		desirecomponents = NoSectyComponents[edgex.Spec.Version]
 	}
+	//TODO: handle edgex.Spec.Components
 
 	defer func() {
-		edgex.Status.ServiceReplicas = int32(len(desireservices))
-		edgex.Status.ServiceReadyReplicas = readyservice
+		edgex.Status.ReadyComponentNum = readycomponent
+		edgex.Status.UnreadyComponentNum = int32(len(desirecomponents)) - readycomponent
 	}()
 
-	for _, desireservice := range desireservices {
-		needservices[desireservice.Name] = true
-		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        desireservice.Name,
-				Namespace:   edgex.Namespace,
-			},
-			Spec: *desireservice.Spec.DeepCopy(),
+NextC:
+	for _, desirecomponent := range desirecomponents {
+		readyService := false
+		readyDeployment := false
+		needcomponents[desirecomponent.Name] = true
+		serviceport := []corev1.ServicePort{}
+		containerport := []corev1.ContainerPort{}
+		handlePort(&serviceport, &containerport, desirecomponent.Ports)
+		volumemount := []corev1.VolumeMount{}
+		volume := []corev1.Volume{}
+		handleVolume(&volumemount, &volume, desirecomponent.Volumes)
+		envs := []corev1.EnvVar{}
+		handleEnv(&envs, desirecomponent.ComponentEnv)
+
+		ok, err := r.handleService(ctx, edgex, desirecomponent.Name, &serviceport)
+		if !ok {
+			return ok, err
 		}
-		for k, v := range desireservice.Annotations {
-			service.Annotations[k] = v
-		}
-		for k, v := range desireservice.Labels {
-			service.Labels[k] = v
-		}
-		service.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelService
-		service.Annotations[AnnotationServiceTopologyKey] = AnnotationServiceTopologyValueNodePool
-		if edgex.Spec.ServiceType != "" {
-			service.Spec.Type = edgex.Spec.ServiceType
-		}
-		_, err := controllerutil.CreateOrUpdate(
-			ctx,
-			r.Client,
-			service,
-			func() error {
-				return controllerutil.SetOwnerReference(edgex, service, r.Scheme)
-			},
-		)
-
-		if err != nil {
-			return false, err
-		}
-
-		readyservice++
-	}
-
-	/* Remove the service owner that we do not need */
-	servicelist := &corev1.ServiceList{}
-	if err := r.List(ctx, servicelist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelService}); err == nil {
-		for _, s := range servicelist.Items {
-			if _, ok := needservices[s.Name]; ok {
-				continue
-			}
-			r.removeOwner(ctx, edgex, &s)
-		}
-	}
-
-	return true, nil
-}
-
-func (r *EdgeXReconciler) reconcileDeployment(ctx context.Context, edgex *devicev1alpha1.EdgeX) (bool, error) {
-	desiredeployments := make(map[string]devicev1alpha1.DeploymentTemplateSpec)
-	needdeployments := make(map[string]bool)
-	var readydeployment int32
-
-	for _, coreDeployment := range CoreDeployment[edgex.Spec.Version] {
-		desiredeployments[coreDeployment.Name] = coreDeployment
-	}
-	for _, addDeployment := range edgex.Spec.AdditionalDeployment {
-		desiredeployments[addDeployment.Name] = addDeployment
-	}
-
-	defer func() {
-		edgex.Status.DeploymentReplicas = int32(len(desiredeployments))
-		edgex.Status.DeploymentReadyReplicas = readydeployment
-	}()
-
-NextUD:
-	for _, desireDeployment := range desiredeployments {
-		needdeployments[desireDeployment.Name] = true
+		readyService = true
 
 		ud := &unitv1alpha1.YurtAppSet{}
-		err := r.Get(
+		err = r.Get(
 			ctx,
 			types.NamespacedName{
 				Namespace: edgex.Namespace,
-				Name:      desireDeployment.Name},
+				Name:      desirecomponent.Name},
 			ud)
-
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return false, err
 			}
-			desirespec := desireDeployment.Spec.DeepCopy()
-
-			if edgex.Spec.ImageRegistry != "" {
-				for i := range desirespec.Template.Spec.Containers {
-					desirespec.Template.Spec.Containers[i].Image = edgex.Spec.ImageRegistry + "/" + desirespec.Template.Spec.Containers[i].Image
-				}
+			container := corev1.Container{
+				Name:            desirecomponent.Name,
+				Image:           desirecomponent.Image,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Ports:           containerport,
+				VolumeMounts:    volumemount,
+				EnvFrom:         []corev1.EnvFromSource{efs},
+				Env:             envs,
 			}
-
-			ud = &unitv1alpha1.YurtAppSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      make(map[string]string),
-					Annotations: make(map[string]string),
-					Name:        desireDeployment.Name,
-					Namespace:   edgex.Namespace,
-				},
-				Spec: unitv1alpha1.YurtAppSetSpec{
-					Selector: desireDeployment.Spec.Selector.DeepCopy(),
-					WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
-						DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{
-							ObjectMeta: *desireDeployment.Spec.Template.ObjectMeta.DeepCopy(),
-							Spec:       *desirespec},
-					},
-				},
-			}
-
-			ud.Labels[devicev1alpha1.LabelEdgeXGenerate] = LabelDeployment
-			pool := unitv1alpha1.Pool{
-				Name:     edgex.Spec.PoolName,
-				Replicas: pointer.Int32Ptr(1),
-			}
-			pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
-				corev1.NodeSelectorRequirement{
-					Key:      unitv1alpha1.LabelCurrentNodePool,
-					Operator: corev1.NodeSelectorOpIn,
-					Values:   []string{edgex.Spec.PoolName},
-				})
-			ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
-			if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
-				return false, err
-			}
-			if err := r.Create(ctx, ud); err != nil {
-				return false, err
+			ok, err := r.handleDeployment(ctx, edgex, ud, desirecomponent.Name, &volume, &container)
+			if !ok {
+				return ok, err
 			}
 		} else {
 			if _, ok := ud.Status.PoolReplicas[edgex.Spec.PoolName]; ok {
 				if ud.Status.ReadyReplicas == ud.Status.Replicas {
-					readydeployment++
+					readyDeployment = true
+					if readyDeployment && readyService {
+						readycomponent++
+					}
 				}
-				continue NextUD
+				continue NextC
 			}
-
 			pool := unitv1alpha1.Pool{
 				Name:     edgex.Spec.PoolName,
 				Replicas: pointer.Int32Ptr(1),
@@ -424,7 +388,16 @@ NextUD:
 					Operator: corev1.NodeSelectorOpIn,
 					Values:   []string{edgex.Spec.PoolName},
 				})
-			ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
+			flag := false
+			for _, up := range ud.Spec.Topology.Pools {
+				if up.Name == pool.Name {
+					flag = true
+					break
+				}
+			}
+			if !flag {
+				ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
+			}
 			if err := controllerutil.SetOwnerReference(edgex, ud, r.Scheme); err != nil {
 				return false, err
 			}
@@ -434,17 +407,177 @@ NextUD:
 		}
 	}
 
-	deploymentlist := &unitv1alpha1.YurtAppSetList{}
-	if err := r.List(ctx, deploymentlist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha1.LabelEdgeXGenerate: LabelDeployment}); err == nil {
-		for _, s := range deploymentlist.Items {
-			if _, ok := needdeployments[s.Name]; ok {
+	/* Remove the service owner that we do not need */
+	servicelist := &corev1.ServiceList{}
+	if err := r.List(ctx, servicelist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha2.LabelEdgeXGenerate: LabelService}); err == nil {
+		for _, s := range servicelist.Items {
+			if _, ok := needcomponents[s.Name]; ok {
 				continue
 			}
 			r.removeOwner(ctx, edgex, &s)
 		}
 	}
 
-	return readydeployment == int32(len(desiredeployments)), nil
+	/* Remove the deployment owner that we do not need */
+	deploymentlist := &unitv1alpha1.YurtAppSetList{}
+	if err := r.List(ctx, deploymentlist, client.InNamespace(edgex.Namespace), client.MatchingLabels{devicev1alpha2.LabelEdgeXGenerate: LabelDeployment}); err == nil {
+		for _, s := range deploymentlist.Items {
+			if _, ok := needcomponents[s.Name]; ok {
+				continue
+			}
+			r.removeOwner(ctx, edgex, &s)
+		}
+	}
+
+	return readycomponent == int32(len(desirecomponents)), nil
+}
+func handlePort(serviceports *[]corev1.ServicePort, containerports *[]corev1.ContainerPort, componentports []Port) {
+	for _, port := range componentports {
+		sp := corev1.ServicePort{
+			Protocol:   corev1.Protocol(port.Protocol),
+			Port:       port.Port,
+			TargetPort: intstr.FromInt(int(port.TargetPort)),
+			Name:       strings.ToLower(port.Protocol) + "-" + strconv.FormatInt(int64(port.Port), 10),
+		}
+		*serviceports = append(*serviceports, sp)
+
+		cp := corev1.ContainerPort{
+			Protocol:      corev1.Protocol(port.Protocol),
+			ContainerPort: port.TargetPort,
+			Name:          strings.ToLower(port.Protocol) + "-" + strconv.FormatInt(int64(port.Port), 10),
+		}
+		*containerports = append(*containerports, cp)
+	}
+}
+
+func handleVolume(volumemounts *[]corev1.VolumeMount, volumes *[]corev1.Volume, componentvolumes []Volume) {
+	for _, v := range componentvolumes {
+		vm := corev1.VolumeMount{
+			Name:      v.Name,
+			MountPath: v.MountPath,
+		}
+		*volumemounts = append(*volumemounts, vm)
+		var vs corev1.Volume
+		if v.HostPath == "" {
+			vs = corev1.Volume{
+				Name: v.Name,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			}
+		} else {
+			vs = corev1.Volume{
+				Name: v.Name,
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: v.HostPath,
+						Type: &HostPathType,
+					},
+				},
+			}
+		}
+
+		*volumes = append(*volumes, vs)
+	}
+}
+
+func handleEnv(envs *[]corev1.EnvVar, componentenvs map[string]string) {
+	for n, e := range componentenvs {
+		env := corev1.EnvVar{
+			Name:  n,
+			Value: e,
+		}
+		*envs = append(*envs, env)
+	}
+}
+
+func (r *EdgeXReconciler) handleService(ctx context.Context, edgex *devicev1alpha2.EdgeX, name string, serviceport *[]corev1.ServicePort) (bool, error) {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        name,
+			Namespace:   edgex.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": name},
+			Ports:    *serviceport,
+		},
+	}
+	service.Labels[devicev1alpha2.LabelEdgeXGenerate] = LabelService
+	service.Annotations[AnnotationServiceTopologyKey] = AnnotationServiceTopologyValueNodePool
+
+	_, err := controllerutil.CreateOrUpdate(
+		ctx,
+		r.Client,
+		service,
+		func() error {
+			return controllerutil.SetOwnerReference(edgex, service, r.Scheme)
+		},
+	)
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (r *EdgeXReconciler) handleDeployment(ctx context.Context, edgex *devicev1alpha2.EdgeX, ud *unitv1alpha1.YurtAppSet, name string, volumes *[]corev1.Volume, container *corev1.Container) (bool, error) {
+	ud = &unitv1alpha1.YurtAppSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        name,
+			Namespace:   edgex.Namespace,
+		},
+		Spec: unitv1alpha1.YurtAppSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": name},
+			},
+			WorkloadTemplate: unitv1alpha1.WorkloadTemplate{
+				DeploymentTemplate: &unitv1alpha1.DeploymentTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"app": name},
+					},
+					Spec: v1.DeploymentSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"app": name},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{"app": name},
+							},
+							Spec: corev1.PodSpec{
+								Volumes:    *volumes,
+								Containers: []corev1.Container{*container},
+								Hostname:   name,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ud.Labels[devicev1alpha2.LabelEdgeXGenerate] = LabelDeployment
+	pool := unitv1alpha1.Pool{
+		Name:     edgex.Spec.PoolName,
+		Replicas: pointer.Int32Ptr(1),
+	}
+	pool.NodeSelectorTerm.MatchExpressions = append(pool.NodeSelectorTerm.MatchExpressions,
+		corev1.NodeSelectorRequirement{
+			Key:      unitv1alpha1.LabelCurrentNodePool,
+			Operator: corev1.NodeSelectorOpIn,
+			Values:   []string{edgex.Spec.PoolName},
+		})
+	ud.Spec.Topology.Pools = append(ud.Spec.Topology.Pools, pool)
+	if err := controllerutil.SetControllerReference(edgex, ud, r.Scheme); err != nil {
+		return false, err
+	}
+	if err := r.Create(ctx, ud); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

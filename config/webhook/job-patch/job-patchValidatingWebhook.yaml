@@ -18,6 +18,7 @@ spec:
             - --namespace=default
             - --secret-name=edgex-webhook-certs
             - --patch-failure-policy=Fail
+            - --crds={"name":"edgexes.device.openyurt.io","conversion":{"strategy":"Webhook","webhook":{"clientConfig":{"service":{"name":"edgex-webhook-service","namespace":"default","path":"/convert","port":443}},"conversionReviewVersions":["v1"]}}}
             - --patch-validating=true
             - --patch-mutating=false
       restartPolicy: OnFailure

@@ -36,6 +36,7 @@ import (
 
 	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	devicev1alpha2 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -78,6 +79,9 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = devicev1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = devicev1alpha2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = unitv1alpha1.AddToScheme(scheme.Scheme)
