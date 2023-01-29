@@ -79,6 +79,7 @@ type EdgeXStatus struct {
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="The edgex ready status"
 //+kubebuilder:printcolumn:name="ReadyComponentNum",type="integer",JSONPath=".status.readyComponentNum",description="The Ready Component."
 //+kubebuilder:printcolumn:name="UnreadyComponentNum",type="integer",JSONPath=".status.unreadyComponentNum",description="The Unready Component."
+//+kubebuilder:storageversion
 
 // EdgeX is the Schema for the edgexes API
 type EdgeX struct {

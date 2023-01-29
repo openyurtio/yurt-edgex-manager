@@ -16,48 +16,4 @@ limitations under the License.
 
 package v1alpha2
 
-import (
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/conversion"
-
-	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
-)
-
-func (src *EdgeX) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1alpha1.EdgeX)
-	dst.ObjectMeta = src.ObjectMeta
-	dst.TypeMeta = src.TypeMeta
-	dst.TypeMeta.APIVersion = "device.openyurt.io/v1alpha1"
-	dst.Spec.Version = src.Spec.Version
-	dst.Spec.ImageRegistry = src.Spec.ImageRegistry
-	dst.Spec.PoolName = src.Spec.PoolName
-	dst.Spec.ServiceType = corev1.ServiceTypeClusterIP
-	//TODO: AdditionalService and AdditionalDeployment
-
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Initialized = src.Status.Initialized
-	dst.Status.ServiceReadyReplicas = src.Status.ReadyComponentNum
-	dst.Status.ServiceReplicas = src.Status.ReadyComponentNum + src.Status.UnreadyComponentNum
-	dst.Status.DeploymentReadyReplicas = src.Status.ReadyComponentNum
-	dst.Status.DeploymentReplicas = src.Status.ReadyComponentNum + src.Status.UnreadyComponentNum
-	dst.Status.Conditions = src.Status.Conditions
-
-	return nil
-}
-func (dst *EdgeX) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1alpha1.EdgeX)
-	dst.ObjectMeta = src.ObjectMeta
-	dst.TypeMeta = src.TypeMeta
-	dst.TypeMeta.APIVersion = "device.openyurt.io/v1alpha2"
-	dst.Spec.Version = src.Spec.Version
-	dst.Spec.Security = false
-	dst.Spec.ImageRegistry = src.Spec.ImageRegistry
-	dst.Spec.PoolName = src.Spec.PoolName
-	//TODO: Components
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Initialized = src.Status.Initialized
-	dst.Status.ReadyComponentNum = src.Status.DeploymentReadyReplicas
-	dst.Status.UnreadyComponentNum = src.Status.DeploymentReplicas - src.Status.DeploymentReadyReplicas
-	dst.Status.Conditions = src.Status.Conditions
-	return nil
-}
+func (*EdgeX) Hub() {}
