@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package validating
+package edgex
 
 import (
 	"context"
@@ -114,11 +114,11 @@ func (webhook *EdgeXHandler) ValidateDelete(_ context.Context, obj runtime.Objec
 // validate validates a EdgeX
 func (webhook *EdgeXHandler) validate(ctx context.Context, edgex *v1alpha1.EdgeX) field.ErrorList {
 	// verify the version
-	if !(edgex.Spec.Version == "jakarta" || edgex.Spec.Version == "hanoi") {
-		return field.ErrorList{
-			field.Invalid(field.NewPath("spec", "version"), edgex.Spec.Version, "must be one of jakarta, hanoi"),
-		}
-	}
+	// if !(edgex.Spec.Version == "jakarta" || edgex.Spec.Version == "hanoi") {
+	// 	return field.ErrorList{
+	// 		field.Invalid(field.NewPath("spec", "version"), edgex.Spec.Version, "must be one of jakarta, hanoi"),
+	// 	}
+	// }
 	// verify that the poolname is a right nodepool name
 	nodePools := &unitv1alpha1.NodePoolList{}
 	if err := webhook.Client.List(ctx, nodePools); err != nil {

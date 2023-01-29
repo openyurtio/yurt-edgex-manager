@@ -97,8 +97,10 @@ func (c *Component) fillVolumes(volumes []interface{}) {
 		} else {
 			// Like this value: edgex-init:/edgex-init:ro,z
 			volume := Volume{
-				Name:      infos[0],
-				HostPath:  infos[1],
+				Name: infos[0],
+				// For non-mapped volumes, we should set it to emptyDir
+				// to prevent legacy configurations from being read when the component restarts
+				HostPath:  "",
 				MountPath: infos[1],
 			}
 			c.Volumes = append(c.Volumes, volume)

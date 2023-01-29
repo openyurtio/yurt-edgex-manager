@@ -47,36 +47,6 @@ var _ = Describe("test webhook", func() {
 		cleanupEdgex(ctx, k8sClient, edgexes)
 	})
 
-	It("Create a edgex in beijing with wrong version", func() {
-		edgexForWrongVersion := &devicev1alpha1.EdgeX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "edgex-webhook-beijing-version",
-				Namespace: "default",
-			},
-			Spec: devicev1alpha1.EdgeXSpec{
-				PoolName: "beijing",
-				Version:  "test",
-			},
-		}
-		k8sClient.Create(ctx, edgexForWrongVersion)
-		res := devicev1alpha1.EdgeX{}
-		Eventually(func() bool {
-			key := client.ObjectKey{
-				Namespace: "default",
-				Name:      "edgex-webhook-beijing-version",
-			}
-			if err := k8sClient.Get(ctx, key, &res); err != nil {
-				return false
-			}
-			if res.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgexForWrongVersion)
-				return true
-			}
-			return false
-
-		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeFalse(), func() string { return "EdgeX beijing with wrong version ready" })
-	})
-
 	It("Create a edgex in beijing with wrong servicetype", func() {
 		edgexForWrongServiceType := &devicev1alpha1.EdgeX{
 			ObjectMeta: metav1.ObjectMeta{

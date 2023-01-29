@@ -28,6 +28,7 @@ const (
 	LabelEdgeXGenerate = "www.edgexfoundry.org/generate"
 )
 
+// Component defines the components of EdgeX
 type Component struct {
 	Name string `json:"name"`
 
@@ -78,7 +79,6 @@ type EdgeXStatus struct {
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="The edgex ready status"
 //+kubebuilder:printcolumn:name="ReadyComponentNum",type="integer",JSONPath=".status.readyComponentNum",description="The Ready Component."
 //+kubebuilder:printcolumn:name="UnreadyComponentNum",type="integer",JSONPath=".status.unreadyComponentNum",description="The Unready Component."
-//+kubebuilder:unservedversion
 
 // EdgeX is the Schema for the edgexes API
 type EdgeX struct {

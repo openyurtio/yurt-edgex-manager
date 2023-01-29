@@ -23,36 +23,31 @@ import (
 
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
 	edgexwebhook "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex"
+	"gopkg.in/yaml.v2"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/yaml"
 
 	devicev1alpha1 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	devicev1alpha2 "github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 	"github.com/openyurtio/yurt-edgex-manager/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
-type EdgeXConfiguration struct {
-	Version     string                                  `json:"version,omitempty"`
-	Configmap   corev1.ConfigMap                        `json:"configmap,omitempty"`
-	Services    []devicev1alpha1.ServiceTemplateSpec    `json:"services,omitempty"`
-	Deployments []devicev1alpha1.DeploymentTemplateSpec `json:"deployments,omitempty"`
-}
-
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme       = runtime.NewScheme()
+	setupLog     = ctrl.Log.WithName("setup")
+	securityFile = "EdgeXConfig/config.yaml"
+	nosectyFile  = "EdgeXConfig/config-nosecty.yaml"
 	//go:embed EdgeXConfig
 	edgeXconfig embed.FS
 )
@@ -61,6 +56,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(devicev1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(devicev1alpha2.AddToScheme(scheme))
 
 	utilruntime.Must(unitv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
@@ -87,29 +84,33 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	files, err := edgeXconfig.ReadDir("EdgeXConfig")
+	securityContent, err := edgeXconfig.ReadFile(securityFile)
 	if err != nil {
-		setupLog.Error(err, "File to open the embed EdgeX config")
+		setupLog.Error(err, "File to open the embed EdgeX security config")
 		os.Exit(1)
 	}
-	for _, file := range files {
-		var edgexconfig EdgeXConfiguration
-		if file.IsDir() {
-			continue
-		}
-		configdata, err := edgeXconfig.ReadFile("EdgeXConfig/" + file.Name())
-		if err != nil {
-			setupLog.Error(err, "File to open the embed EdgeX config")
-			os.Exit(1)
-		}
-		err = yaml.Unmarshal(configdata, &edgexconfig)
-		if err != nil {
-			setupLog.Error(err, "Wrong edgeX configuration file")
-			os.Exit(1)
-		}
-		controllers.CoreDeployment[edgexconfig.Version] = edgexconfig.Deployments
-		controllers.CoreServices[edgexconfig.Version] = edgexconfig.Services
-		controllers.CoreConfigMap[edgexconfig.Version] = edgexconfig.Configmap
+	nosectyContent, err := edgeXconfig.ReadFile(nosectyFile)
+	if err != nil {
+		setupLog.Error(err, "File to open the embed EdgeX nosecty config")
+	}
+	var edgexconfig controllers.EdgeXConfig
+	err = yaml.Unmarshal(securityContent, &edgexconfig)
+	if err != nil {
+		setupLog.Error(err, "Error security edgeX configuration file")
+		os.Exit(1)
+	}
+	for _, version := range edgexconfig.Versions {
+		controllers.SecurityComponents[version.Name] = version.Components
+		controllers.SecurityEnv[version.Name] = version.Env
+	}
+	err = yaml.Unmarshal(nosectyContent, &edgexconfig)
+	if err != nil {
+		setupLog.Error(err, "Error nosecty edgeX configuration file")
+		os.Exit(1)
+	}
+	for _, version := range edgexconfig.Versions {
+		controllers.NoSectyComponents[version.Name] = version.Components
+		controllers.NoSectyEnv[version.Name] = version.Env
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

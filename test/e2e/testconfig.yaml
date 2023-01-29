@@ -33,6 +33,6 @@ variables:
   IP_FAMILY: "IPv4"
 
 intervals:
-  default/wait-dependency: ["1m", "10s"]
+  default/wait-dependency: ["5m", "10s"]
   default/create-nodepool: ["30s", "5s"]
-  default/create-edgex: ["1m", "10s"]
+  default/create-edgex: ["5m", "10s"]
