@@ -1,4 +1,4 @@
-apiVersion: device.openyurt.io/v1alpha1
+apiVersion: device.openyurt.io/v1alpha2
 kind: EdgeX
 metadata:
   name: edgex-sample-beijing
