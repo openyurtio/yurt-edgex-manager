@@ -492,6 +492,9 @@ func handleEnv(envs *[]corev1.EnvVar, componentenvs map[string]string) {
 }
 
 func (r *EdgeXReconciler) handleService(ctx context.Context, edgex *devicev1alpha2.EdgeX, name string, serviceport *[]corev1.ServicePort) (bool, error) {
+	if len(*serviceport) == 0 {
+		return true, nil
+	}
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      make(map[string]string),

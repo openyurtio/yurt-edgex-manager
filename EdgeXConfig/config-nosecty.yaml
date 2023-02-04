@@ -11,14 +11,35 @@ versions:
         MESSAGEQUEUE_HOST: edgex-redis
         REGISTRY_HOST: edgex-core-consul
       components:
-        - name: edgex-device-virtual
-          image: openyurt/device-virtual:2.3.0
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.3.0
           ports:
             - protocol: TCP
-              port: 59900
-              targetPort: 59900
+              port: 59701
+              targetPort: 59701
           componentEnv:
-            SERVICE_HOST: edgex-device-virtual
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
+        - name: edgex-core-command
+          image: openyurt/core-command:2.3.0
+          ports:
+            - protocol: TCP
+              port: 59882
+              targetPort: 59882
+          componentEnv:
+            MESSAGEQUEUE_EXTERNAL_URL: tcp://edgex-mqtt-broker:1883
+            MESSAGEQUEUE_INTERNAL_HOST: edgex-redis
+            SERVICE_HOST: edgex-core-command
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.3.0
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
         - name: edgex-core-metadata
           image: openyurt/core-metadata:2.3.0
           ports:
@@ -28,6 +49,79 @@ versions:
           componentEnv:
             NOTIFICATIONS_SENDER: edgex-core-metadata
             SERVICE_HOST: edgex-core-metadata
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.3.0
+          ports:
+            - protocol: TCP
+              port: 59860
+              targetPort: 59860
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.3.0
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-ui-go
+          image: openyurt/edgex-ui:2.3.0
+          ports:
+            - protocol: TCP
+              port: 4000
+              targetPort: 4000
+              nodePort: 4000
+          componentEnv:
+            SERVICE_HOST: edgex-ui-go
+        - name: edgex-core-consul
+          image: openyurt/consul:1.13.2
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+        - name: edgex-core-data
+          image: openyurt/core-data:2.3.0
+          ports:
+            - protocol: TCP
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 59880
+              targetPort: 59880
+          componentEnv:
+            SERVICE_HOST: edgex-core-data
+        - name: edgex-redis
+          image: openyurt/redis:7.0.5-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
+        - name: edgex-device-virtual
+          image: openyurt/device-virtual:2.3.0
+          ports:
+            - protocol: TCP
+              port: 59900
+              targetPort: 59900
+          componentEnv:
+            SERVICE_HOST: edgex-device-virtual
         - name: edgex-kuiper
           image: openyurt/ekuiper:1.7.1-alpine
           volumns:
@@ -60,100 +154,6 @@ versions:
             INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
             INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
             SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.3.0
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
-          ports:
-            - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-ui-go
-          image: openyurt/edgex-ui:2.3.0
-          ports:
-            - protocol: TCP
-              port: 4000
-              targetPort: 4000
-              nodePort: 4000
-          componentEnv:
-            SERVICE_HOST: edgex-ui-go
-        - name: edgex-core-command
-          image: openyurt/core-command:2.3.0
-          ports:
-            - protocol: TCP
-              port: 59882
-              targetPort: 59882
-          componentEnv:
-            MESSAGEQUEUE_EXTERNAL_URL: tcp://edgex-mqtt-broker:1883
-            MESSAGEQUEUE_INTERNAL_HOST: edgex-redis
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-redis
-          image: openyurt/redis:7.0.5-alpine
-          volumns:
-            - name: db-data
-              hostPath: ""
-              mountPath: /data
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
-        - name: edgex-core-data
-          image: openyurt/core-data:2.3.0
-          ports:
-            - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 59880
-              targetPort: 59880
-          componentEnv:
-            SERVICE_HOST: edgex-core-data
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.3.0
-          ports:
-            - protocol: TCP
-              port: 59986
-              targetPort: 59986
-          componentEnv:
-            SERVICE_HOST: edgex-device-rest
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.3.0
-          ports:
-            - protocol: TCP
-              port: 59860
-              targetPort: 59860
-          componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.3.0
-          ports:
-            - protocol: TCP
-              port: 59701
-              targetPort: 59701
-          componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-core-consul
-          image: openyurt/consul:1.13.2
-          volumns:
-            - name: consul-config
-              hostPath: ""
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: ""
-              mountPath: /consul/data
-          ports:
-            - protocol: TCP
-              port: 8500
-              targetPort: 8500
     - versionName: jakarta
       env:
         CLIENTS_CORE_COMMAND_HOST: edgex-core-command
@@ -166,57 +166,6 @@ versions:
         MESSAGEQUEUE_HOST: edgex-redis
         REGISTRY_HOST: edgex-core-consul
       components:
-        - name: edgex-support-scheduler
-          image: openyurt/support-scheduler:2.1.1
-          ports:
-            - protocol: TCP
-              port: 59861
-              targetPort: 59861
-          componentEnv:
-            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
-            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
-            SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.1.1
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
-          ports:
-            - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
-        - name: edgex-core-command
-          image: openyurt/core-command:2.1.1
-          ports:
-            - protocol: TCP
-              port: 59882
-              targetPort: 59882
-          componentEnv:
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-core-data
-          image: openyurt/core-data:2.1.1
-          ports:
-            - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 59880
-              targetPort: 59880
-          componentEnv:
-            SERVICE_HOST: edgex-core-data
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.1.1
-          ports:
-            - protocol: TCP
-              port: 59986
-              targetPort: 59986
-          componentEnv:
-            SERVICE_HOST: edgex-device-rest
         - name: edgex-device-virtual
           image: openyurt/device-virtual:2.1.1
           ports:
@@ -234,63 +183,6 @@ versions:
           componentEnv:
             NOTIFICATIONS_SENDER: edgex-core-metadata
             SERVICE_HOST: edgex-core-metadata
-        - name: edgex-kuiper
-          image: openyurt/ekuiper:1.4.4-alpine
-          volumns:
-            - name: kuiper-data
-              hostPath: ""
-              mountPath: /kuiper/data
-          ports:
-            - protocol: TCP
-              port: 59720
-              targetPort: 59720
-          componentEnv:
-            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
-            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
-            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
-            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
-            EDGEX__DEFAULT__PORT: "6379"
-            EDGEX__DEFAULT__PROTOCOL: redis
-            EDGEX__DEFAULT__SERVER: edgex-redis
-            EDGEX__DEFAULT__TOPIC: rules-events
-            EDGEX__DEFAULT__TYPE: redis
-            KUIPER__BASIC__CONSOLELOG: "true"
-            KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.1.1
-          ports:
-            - protocol: TCP
-              port: 59701
-              targetPort: 59701
-          componentEnv:
-            EDGEX_PROFILE: rules-engine
-            SERVICE_HOST: edgex-app-rules-engine
-            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
-            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
-        - name: edgex-core-consul
-          image: openyurt/consul:1.10.3
-          volumns:
-            - name: consul-config
-              hostPath: ""
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: ""
-              mountPath: /consul/data
-          ports:
-            - protocol: TCP
-              port: 8500
-              targetPort: 8500
-              nodePort: 8500
-        - name: edgex-redis
-          image: openyurt/redis:6.2.6-alpine
-          volumns:
-            - name: db-data
-              hostPath: ""
-              mountPath: /data
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
         - name: edgex-support-notifications
           image: openyurt/support-notifications:2.1.1
           ports:
@@ -299,48 +191,6 @@ versions:
               targetPort: 59860
           componentEnv:
             SERVICE_HOST: edgex-support-notifications
-        - name: edgex-ui-go
-          image: openyurt/edgex-ui:2.1.0
-          ports:
-            - protocol: TCP
-              port: 4000
-              targetPort: 4000
-              nodePort: 4000
-    - versionName: kamakura
-      env:
-        CLIENTS_CORE_COMMAND_HOST: edgex-core-command
-        CLIENTS_CORE_DATA_HOST: edgex-core-data
-        CLIENTS_CORE_METADATA_HOST: edgex-core-metadata
-        CLIENTS_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
-        CLIENTS_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
-        DATABASES_PRIMARY_HOST: edgex-redis
-        EDGEX_SECURITY_SECRET_STORE: "false"
-        MESSAGEQUEUE_HOST: edgex-redis
-        REGISTRY_HOST: edgex-core-consul
-      components:
-        - name: edgex-core-consul
-          image: openyurt/consul:1.10.10
-          volumns:
-            - name: consul-config
-              hostPath: ""
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: ""
-              mountPath: /consul/data
-          ports:
-            - protocol: TCP
-              port: 8500
-              targetPort: 8500
-        - name: edgex-redis
-          image: openyurt/redis:6.2.6-alpine
-          volumns:
-            - name: db-data
-              hostPath: ""
-              mountPath: /data
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
         - name: edgex-kuiper
           image: openyurt/ekuiper:1.4.4-alpine
           volumns:
@@ -364,7 +214,7 @@ versions:
             KUIPER__BASIC__CONSOLELOG: "true"
             KUIPER__BASIC__RESTPORT: "59720"
         - name: edgex-support-scheduler
-          image: openyurt/support-scheduler:2.2.0
+          image: openyurt/support-scheduler:2.1.1
           ports:
             - protocol: TCP
               port: 59861
@@ -374,7 +224,7 @@ versions:
             INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
             SERVICE_HOST: edgex-support-scheduler
         - name: edgex-app-rules-engine
-          image: openyurt/app-service-configurable:2.2.0
+          image: openyurt/app-service-configurable:2.1.1
           ports:
             - protocol: TCP
               port: 59701
@@ -384,8 +234,51 @@ versions:
             SERVICE_HOST: edgex-app-rules-engine
             TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
             TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
+        - name: edgex-core-command
+          image: openyurt/core-command:2.1.1
+          ports:
+            - protocol: TCP
+              port: 59882
+              targetPort: 59882
+          componentEnv:
+            SERVICE_HOST: edgex-core-command
+        - name: edgex-core-consul
+          image: openyurt/consul:1.10.3
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+              nodePort: 8500
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.1.1
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-ui-go
+          image: openyurt/edgex-ui:2.1.0
+          ports:
+            - protocol: TCP
+              port: 4000
+              targetPort: 4000
+              nodePort: 4000
         - name: edgex-core-data
-          image: openyurt/core-data:2.2.0
+          image: openyurt/core-data:2.1.1
           ports:
             - protocol: TCP
               port: 5563
@@ -395,6 +288,36 @@ versions:
               targetPort: 59880
           componentEnv:
             SERVICE_HOST: edgex-core-data
+        - name: edgex-redis
+          image: openyurt/redis:6.2.6-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.1.1
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
+    - versionName: kamakura
+      env:
+        CLIENTS_CORE_COMMAND_HOST: edgex-core-command
+        CLIENTS_CORE_DATA_HOST: edgex-core-data
+        CLIENTS_CORE_METADATA_HOST: edgex-core-metadata
+        CLIENTS_SUPPORT_NOTIFICATIONS_HOST: edgex-support-notifications
+        CLIENTS_SUPPORT_SCHEDULER_HOST: edgex-support-scheduler
+        DATABASES_PRIMARY_HOST: edgex-redis
+        EDGEX_SECURITY_SECRET_STORE: "false"
+        MESSAGEQUEUE_HOST: edgex-redis
+        REGISTRY_HOST: edgex-core-consul
+      components:
         - name: edgex-device-rest
           image: openyurt/device-rest:2.2.0
           ports:
@@ -411,6 +334,62 @@ versions:
               targetPort: 59900
           componentEnv:
             SERVICE_HOST: edgex-device-virtual
+        - name: edgex-kuiper
+          image: openyurt/ekuiper:1.4.4-alpine
+          volumns:
+            - name: kuiper-data
+              hostPath: ""
+              mountPath: /kuiper/data
+          ports:
+            - protocol: TCP
+              port: 59720
+              targetPort: 59720
+          componentEnv:
+            CONNECTION__EDGEX__REDISMSGBUS__PORT: "6379"
+            CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL: redis
+            CONNECTION__EDGEX__REDISMSGBUS__SERVER: edgex-redis
+            CONNECTION__EDGEX__REDISMSGBUS__TYPE: redis
+            EDGEX__DEFAULT__PORT: "6379"
+            EDGEX__DEFAULT__PROTOCOL: redis
+            EDGEX__DEFAULT__SERVER: edgex-redis
+            EDGEX__DEFAULT__TOPIC: rules-events
+            EDGEX__DEFAULT__TYPE: redis
+            KUIPER__BASIC__CONSOLELOG: "true"
+            KUIPER__BASIC__RESTPORT: "59720"
+        - name: edgex-core-consul
+          image: openyurt/consul:1.10.10
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
+        - name: edgex-core-data
+          image: openyurt/core-data:2.2.0
+          ports:
+            - protocol: TCP
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 59880
+              targetPort: 59880
+          componentEnv:
+            SERVICE_HOST: edgex-core-data
+        - name: edgex-redis
+          image: openyurt/redis:6.2.6-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
         - name: edgex-core-metadata
           image: openyurt/core-metadata:2.2.0
           ports:
@@ -428,6 +407,16 @@ versions:
               targetPort: 59860
           componentEnv:
             SERVICE_HOST: edgex-support-notifications
+        - name: edgex-support-scheduler
+          image: openyurt/support-scheduler:2.2.0
+          ports:
+            - protocol: TCP
+              port: 59861
+              targetPort: 59861
+          componentEnv:
+            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
+            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
+            SERVICE_HOST: edgex-support-scheduler
         - name: edgex-sys-mgmt-agent
           image: openyurt/sys-mgmt-agent:2.2.0
           volumns:
@@ -449,6 +438,17 @@ versions:
               port: 4000
               targetPort: 4000
               nodePort: 4000
+        - name: edgex-app-rules-engine
+          image: openyurt/app-service-configurable:2.2.0
+          ports:
+            - protocol: TCP
+              port: 59701
+              targetPort: 59701
+          componentEnv:
+            EDGEX_PROFILE: rules-engine
+            SERVICE_HOST: edgex-app-rules-engine
+            TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST: edgex-redis
+            TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-redis
         - name: edgex-core-command
           image: openyurt/core-command:2.2.0
           ports:
@@ -488,6 +488,60 @@ versions:
               targetPort: 59882
           componentEnv:
             SERVICE_HOST: edgex-core-command
+        - name: edgex-core-metadata
+          image: openyurt/core-metadata:2.0.0
+          ports:
+            - protocol: TCP
+              port: 59881
+              targetPort: 59881
+          componentEnv:
+            NOTIFICATIONS_SENDER: edgex-core-metadata
+            SERVICE_HOST: edgex-core-metadata
+        - name: edgex-support-notifications
+          image: openyurt/support-notifications:2.0.0
+          ports:
+            - protocol: TCP
+              port: 59860
+              targetPort: 59860
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
+        - name: edgex-support-scheduler
+          image: openyurt/support-scheduler:2.0.0
+          ports:
+            - protocol: TCP
+              port: 59861
+              targetPort: 59861
+          componentEnv:
+            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
+            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
+            SERVICE_HOST: edgex-support-scheduler
+        - name: edgex-sys-mgmt-agent
+          image: openyurt/sys-mgmt-agent:2.0.0
+          volumns:
+            - name: anonymous-volume1
+              hostPath: /var/run/docker.sock
+              mountPath: /var/run/docker.sock
+          ports:
+            - protocol: TCP
+              port: 58890
+              targetPort: 58890
+          componentEnv:
+            EXECUTORPATH: /sys-mgmt-executor
+            METRICSMECHANISM: executor
+            SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-core-consul
+          image: openyurt/consul:1.9.5
+          volumns:
+            - name: consul-config
+              hostPath: ""
+              mountPath: /consul/config
+            - name: consul-data
+              hostPath: ""
+              mountPath: /consul/data
+          ports:
+            - protocol: TCP
+              port: 8500
+              targetPort: 8500
         - name: edgex-core-data
           image: openyurt/core-data:2.0.0
           ports:
@@ -499,6 +553,24 @@ versions:
               targetPort: 59880
           componentEnv:
             SERVICE_HOST: edgex-core-data
+        - name: edgex-redis
+          image: openyurt/redis:6.2.4-alpine
+          volumns:
+            - name: db-data
+              hostPath: ""
+              mountPath: /data
+          ports:
+            - protocol: TCP
+              port: 6379
+              targetPort: 6379
+        - name: edgex-device-rest
+          image: openyurt/device-rest:2.0.0
+          ports:
+            - protocol: TCP
+              port: 59986
+              targetPort: 59986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
         - name: edgex-device-virtual
           image: openyurt/device-virtual:2.0.0
           ports:
@@ -525,78 +597,6 @@ versions:
             EDGEX__DEFAULT__TYPE: redis
             KUIPER__BASIC__CONSOLELOG: "true"
             KUIPER__BASIC__RESTPORT: "59720"
-        - name: edgex-support-scheduler
-          image: openyurt/support-scheduler:2.0.0
-          ports:
-            - protocol: TCP
-              port: 59861
-              targetPort: 59861
-          componentEnv:
-            INTERVALACTIONS_SCRUBAGED_HOST: edgex-core-data
-            INTERVALACTIONS_SCRUBPUSHED_HOST: edgex-core-data
-            SERVICE_HOST: edgex-support-scheduler
-        - name: edgex-core-consul
-          image: openyurt/consul:1.9.5
-          volumns:
-            - name: consul-config
-              hostPath: ""
-              mountPath: /consul/config
-            - name: consul-data
-              hostPath: ""
-              mountPath: /consul/data
-          ports:
-            - protocol: TCP
-              port: 8500
-              targetPort: 8500
-        - name: edgex-redis
-          image: openyurt/redis:6.2.4-alpine
-          volumns:
-            - name: db-data
-              hostPath: ""
-              mountPath: /data
-          ports:
-            - protocol: TCP
-              port: 6379
-              targetPort: 6379
-        - name: edgex-device-rest
-          image: openyurt/device-rest:2.0.0
-          ports:
-            - protocol: TCP
-              port: 59986
-              targetPort: 59986
-          componentEnv:
-            SERVICE_HOST: edgex-device-rest
-        - name: edgex-core-metadata
-          image: openyurt/core-metadata:2.0.0
-          ports:
-            - protocol: TCP
-              port: 59881
-              targetPort: 59881
-          componentEnv:
-            NOTIFICATIONS_SENDER: edgex-core-metadata
-            SERVICE_HOST: edgex-core-metadata
-        - name: edgex-support-notifications
-          image: openyurt/support-notifications:2.0.0
-          ports:
-            - protocol: TCP
-              port: 59860
-              targetPort: 59860
-          componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-sys-mgmt-agent
-          image: openyurt/sys-mgmt-agent:2.0.0
-          volumns:
-            - name: anonymous-volume1
-              hostPath: /var/run/docker.sock
-              mountPath: /var/run/docker.sock
-          ports:
-            - protocol: TCP
-              port: 58890
-              targetPort: 58890
-          componentEnv:
-            EXECUTORPATH: /sys-mgmt-executor
-            METRICSMECHANISM: executor
-            SERVICE_HOST: edgex-sys-mgmt-agent
     - versionName: hanoi
       env:
         CLIENTS_COMMAND_HOST: edgex-core-command
@@ -611,18 +611,6 @@ versions:
         EDGEX_SECURITY_SECRET_STORE: "false"
         REGISTRY_HOST: edgex-core-consul
       components:
-        - name: edgex-app-service-configurable-rules
-          image: openyurt/docker-app-service-configurable:1.3.1
-          ports:
-            - protocol: TCP
-              port: 48100
-              targetPort: 48100
-          componentEnv:
-            BINDING_PUBLISHTOPIC: events
-            EDGEX_PROFILE: rules-engine
-            MESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-core-data
-            SERVICE_HOST: edgex-app-service-configurable-rules
-            SERVICE_PORT: "48100"
         - name: edgex-core-consul
           image: openyurt/docker-edgex-consul:1.3.0
           volumns:
@@ -652,14 +640,14 @@ versions:
             - protocol: TCP
               port: 6379
               targetPort: 6379
-        - name: edgex-device-rest
-          image: openyurt/docker-device-rest-go:1.2.1
+        - name: edgex-device-virtual
+          image: openyurt/docker-device-virtual-go:1.3.1
           ports:
             - protocol: TCP
-              port: 49986
-              targetPort: 49986
+              port: 49990
+              targetPort: 49990
           componentEnv:
-            SERVICE_HOST: edgex-device-rest
+            SERVICE_HOST: edgex-device-virtual
         - name: edgex-core-metadata
           image: openyurt/docker-core-metadata-go:1.3.1
           ports:
@@ -669,41 +657,6 @@ versions:
           componentEnv:
             NOTIFICATIONS_SENDER: edgex-core-metadata
             SERVICE_HOST: edgex-core-metadata
-        - name: edgex-support-notifications
-          image: openyurt/docker-support-notifications-go:1.3.1
-          ports:
-            - protocol: TCP
-              port: 48060
-              targetPort: 48060
-          componentEnv:
-            SERVICE_HOST: edgex-support-notifications
-        - name: edgex-core-command
-          image: openyurt/docker-core-command-go:1.3.1
-          ports:
-            - protocol: TCP
-              port: 48082
-              targetPort: 48082
-          componentEnv:
-            SERVICE_HOST: edgex-core-command
-        - name: edgex-core-data
-          image: openyurt/docker-core-data-go:1.3.1
-          ports:
-            - protocol: TCP
-              port: 5563
-              targetPort: 5563
-            - protocol: TCP
-              port: 48080
-              targetPort: 48080
-          componentEnv:
-            SERVICE_HOST: edgex-core-data
-        - name: edgex-device-virtual
-          image: openyurt/docker-device-virtual-go:1.3.1
-          ports:
-            - protocol: TCP
-              port: 49990
-              targetPort: 49990
-          componentEnv:
-            SERVICE_HOST: edgex-device-virtual
         - name: edgex-kuiper
           image: openyurt/kuiper:1.1.1-alpine
           ports:
@@ -721,6 +674,45 @@ versions:
             EDGEX__DEFAULT__TOPIC: events
             KUIPER__BASIC__CONSOLELOG: "true"
             KUIPER__BASIC__RESTPORT: "48075"
+        - name: edgex-app-service-configurable-rules
+          image: openyurt/docker-app-service-configurable:1.3.1
+          ports:
+            - protocol: TCP
+              port: 48100
+              targetPort: 48100
+          componentEnv:
+            BINDING_PUBLISHTOPIC: events
+            EDGEX_PROFILE: rules-engine
+            MESSAGEBUS_SUBSCRIBEHOST_HOST: edgex-core-data
+            SERVICE_HOST: edgex-app-service-configurable-rules
+            SERVICE_PORT: "48100"
+        - name: edgex-core-data
+          image: openyurt/docker-core-data-go:1.3.1
+          ports:
+            - protocol: TCP
+              port: 5563
+              targetPort: 5563
+            - protocol: TCP
+              port: 48080
+              targetPort: 48080
+          componentEnv:
+            SERVICE_HOST: edgex-core-data
+        - name: edgex-device-rest
+          image: openyurt/docker-device-rest-go:1.2.1
+          ports:
+            - protocol: TCP
+              port: 49986
+              targetPort: 49986
+          componentEnv:
+            SERVICE_HOST: edgex-device-rest
+        - name: edgex-support-notifications
+          image: openyurt/docker-support-notifications-go:1.3.1
+          ports:
+            - protocol: TCP
+              port: 48060
+              targetPort: 48060
+          componentEnv:
+            SERVICE_HOST: edgex-support-notifications
         - name: edgex-support-scheduler
           image: openyurt/docker-support-scheduler-go:1.3.1
           ports:
@@ -745,3 +737,11 @@ versions:
             EXECUTORPATH: /sys-mgmt-executor
             METRICSMECHANISM: executor
             SERVICE_HOST: edgex-sys-mgmt-agent
+        - name: edgex-core-command
+          image: openyurt/docker-core-command-go:1.3.1
+          ports:
+            - protocol: TCP
+              port: 48082
+              targetPort: 48082
+          componentEnv:
+            SERVICE_HOST: edgex-core-command

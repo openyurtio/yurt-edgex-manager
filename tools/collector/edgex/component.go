@@ -109,6 +109,25 @@ func (c *Component) fillVolumes(volumes []interface{}) {
 	c.repairVolumes()
 }
 
+func (c *Component) fillTmpfs(tmpfs []interface{}) {
+	logger := c.logger
+	for _, v := range tmpfs {
+		tmpfsStr, ok := v.(string)
+		if tmpfsStr == "" || !ok {
+			logger.Warningln("This is not a valid tmpfs", "value:", v)
+			continue
+		}
+		volume := Volume{
+			Name: "",
+			// For tmpfs, we should set it to emptyDir
+			// to prevent legacy configurations from being read when the component restarts
+			HostPath:  "",
+			MountPath: tmpfsStr,
+		}
+		c.Volumes = append(c.Volumes, volume)
+	}
+}
+
 func (c *Component) repairVolumes() {
 	count := 1
 	for i := range c.Volumes {
