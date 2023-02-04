@@ -173,6 +173,11 @@ func (v *Version) catchYML(filename string) error {
 			component.fillVolumes(volumes)
 		}
 
+		tmpfs, ok := componentConfig["tmpfs"].([]interface{})
+		if ok {
+			component.fillTmpfs(tmpfs)
+		}
+
 		ports, ok := componentConfig["ports"].([]interface{})
 		if ok {
 			component.fillPorts(ports)
