@@ -17,11 +17,14 @@ limitations under the License.
 package edgex
 
 import (
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+
+	"github.com/compose-spec/compose-go/loader"
+	"github.com/compose-spec/compose-go/types"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -95,4 +98,18 @@ func stringIsInArray(target string, strArray []string) bool {
 		}
 	}
 	return false
+}
+
+func getProject(filename, content string) (*types.Project, error) {
+	configs := []types.ConfigFile{{
+		Filename: filename,
+		Content:  []byte(content),
+	}}
+	project, err := loader.Load(types.ConfigDetails{
+		ConfigFiles: configs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return project, nil
 }
