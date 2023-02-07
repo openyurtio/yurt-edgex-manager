@@ -34,6 +34,19 @@ var (
 	UnifiedPort    uint
 )
 
+// Handle special cases for some versions
+var versionSpecialHandlers = []func(*Version){
+	func(version *Version) {
+		if version.Name == "hanoi" {
+			version.Env["SERVICE_SERVERBINDADDR"] = "0.0.0.0"
+			version.Env["LOGGING_ENABLEREMOTE"] = "false"
+		}
+	},
+}
+
+// Handle special cases for some components
+var componentSpecialHandlers = []func(*Component){}
+
 func getPage(logger *logrus.Entry, url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
