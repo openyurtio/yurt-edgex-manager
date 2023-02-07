@@ -3,5 +3,5 @@ kind: EdgeX
 metadata:
   name: edgex-sample-beijing
 spec:
-  version: hanoi
+  version: ireland
   poolName: beijing

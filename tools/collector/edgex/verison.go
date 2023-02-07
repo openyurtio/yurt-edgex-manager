@@ -17,10 +17,7 @@ limitations under the License.
 package edgex
 
 import (
-	"bytes"
-
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -140,48 +137,23 @@ func (v *Version) catchYML(filename string) error {
 		return err
 	}
 
-	viper.SetConfigType("yaml")
-	err = viper.ReadConfig(bytes.NewBuffer([]byte(pageStr)))
+	project, err := getProject(filename, pageStr)
 	if err != nil {
-		logger.Errorln("Viper read config error:", err)
 		return err
 	}
 
-	components := viper.Get("services")
-	for key, rawComponent := range components.(map[string]interface{}) {
-		componentConfig := rawComponent.(map[string]interface{})
-		// HACK: Some components do not have a hostname, need to check this problem.
-		hostname, ok := componentConfig["hostname"].(string)
-		if !ok {
-			hostname = key
-		}
-
-		image, ok := componentConfig["image"].(string)
-		if !ok {
-			logger.Infoln("This is not a valid component,", "component:", hostname)
-			continue
-		}
-
+	for _, rawComponent := range project.Services {
+		// Get the hostname and image information to create the component as basic information
+		hostname := rawComponent.Hostname
+		image := rawComponent.Image
 		component := v.newComponent(hostname, image)
-		envs, ok := componentConfig["environment"].(map[string]interface{})
-		if ok {
-			component.addEnv(envs)
-		}
 
-		volumes, ok := componentConfig["volumes"].([]interface{})
-		if ok {
-			component.fillVolumes(volumes)
-		}
-
-		tmpfs, ok := componentConfig["tmpfs"].([]interface{})
-		if ok {
-			component.fillTmpfs(tmpfs)
-		}
-
-		ports, ok := componentConfig["ports"].([]interface{})
-		if ok {
-			component.fillPorts(ports)
-		}
+		// Collect information for each component
+		component.addEnv(rawComponent.Environment)
+		component.fillTmpfs(rawComponent.Tmpfs)
+		component.fillVolumes(rawComponent.Volumes)
+		component.repairVolumes()
+		component.fillPorts(rawComponent.Ports)
 
 		v.Components = append(v.Components, *component)
 	}
