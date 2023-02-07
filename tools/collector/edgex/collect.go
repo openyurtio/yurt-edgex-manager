@@ -72,6 +72,18 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool, arch string) (*E
 		edgeXConfig.Versions = append(edgeXConfig.Versions, *version)
 	}
 
+	// Deal with special circumstances
+	for i := range edgeXConfig.Versions {
+		for j := range edgeXConfig.Versions[i].Components {
+			for _, cf := range componentSpecialHandlers {
+				cf(&edgeXConfig.Versions[i].Components[j])
+			}
+		}
+		for _, vf := range versionSpecialHandlers {
+			vf(&edgeXConfig.Versions[i])
+		}
+	}
+
 	return edgeXConfig, nil
 }
 
