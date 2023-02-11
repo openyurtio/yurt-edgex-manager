@@ -38,8 +38,8 @@ var (
 var versionSpecialHandlers = []func(*Version){
 	func(version *Version) {
 		if version.Name == "hanoi" {
-			version.Env["SERVICE_SERVERBINDADDR"] = "0.0.0.0"
-			version.Env["LOGGING_ENABLEREMOTE"] = "false"
+			version.env["SERVICE_SERVERBINDADDR"] = "0.0.0.0"
+			version.env["LOGGING_ENABLEREMOTE"] = "false"
 		}
 	},
 }
