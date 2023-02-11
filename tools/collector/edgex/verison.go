@@ -18,6 +18,8 @@ package edgex
 
 import (
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -34,28 +36,30 @@ var (
 )
 
 type EdgeXConfig struct {
-	Versions []Version `yaml:"versions"`
+	Versions []*Version `yaml:"versions"`
 }
 
 type Version struct {
 	logger     *logrus.Entry
-	Name       string            `yaml:"versionName"`
-	Env        map[string]string `yaml:"env,omitempty"`
-	Components []Component       `yaml:"components,omitempty"`
+	env        map[string]string
+	Name       string             `yaml:"versionName"`
+	ConfigMaps []corev1.ConfigMap `yaml:"configMaps,omitempty"`
+	Components []*Component       `yaml:"components,omitempty"`
 }
 
 func newVersion(logger *logrus.Entry, name string) *Version {
 	return &Version{
 		logger:     logger.WithField("version", name),
 		Name:       name,
-		Env:        make(map[string]string),
-		Components: make([]Component, 0),
+		ConfigMaps: []corev1.ConfigMap{},
+		Components: []*Component{},
+		env:        make(map[string]string),
 	}
 }
 
 func newEdgeXConfig() *EdgeXConfig {
 	edgeXConfig := &EdgeXConfig{
-		Versions: make([]Version, 0),
+		Versions: make([]*Version, 0),
 	}
 	return edgeXConfig
 }
@@ -95,13 +99,16 @@ func (v *Version) catch(isSecurity bool, arch string) error {
 
 func (v *Version) newComponent(name, image string) *Component {
 	return &Component{
-		logger:       v.logger.WithField("component", name),
-		Name:         name,
-		Image:        image,
-		Volumes:      []Volume{},
-		Ports:        []Port{},
-		ComponentEnv: make(map[string]string),
-		envRef:       &v.Env,
+		logger:         v.logger.WithField("component", name),
+		Name:           name,
+		image:          image,
+		volumes:        []corev1.Volume{},
+		volumeMounts:   []corev1.VolumeMount{},
+		servicePorts:   []corev1.ServicePort{},
+		containerPorts: []corev1.ContainerPort{},
+		componentEnv:   make(map[string]string),
+		envRef:         &v.env,
+		configmapsRef:  &v.ConfigMaps,
 	}
 }
 
@@ -122,7 +129,7 @@ func (v *Version) addEnv(isSecurity bool) error {
 		}
 
 		for key, value := range envs {
-			v.Env[key] = value
+			v.env[key] = value
 		}
 	}
 	return nil
@@ -142,6 +149,8 @@ func (v *Version) catchYML(filename string) error {
 		return err
 	}
 
+	v.handleConfigmap()
+
 	for _, rawComponent := range project.Services {
 		// Get the hostname and image information to create the component as basic information
 		hostname := rawComponent.Hostname
@@ -152,10 +161,12 @@ func (v *Version) catchYML(filename string) error {
 		component.addEnv(rawComponent.Environment)
 		component.fillTmpfs(rawComponent.Tmpfs)
 		component.fillVolumes(rawComponent.Volumes)
-		component.repairVolumes()
 		component.fillPorts(rawComponent.Ports)
 
-		v.Components = append(v.Components, *component)
+		component.handleService()
+		component.handleDeployment()
+
+		v.Components = append(v.Components, component)
 	}
 	return nil
 }
@@ -225,4 +236,18 @@ func (v *Version) pickupFile(filenames []string, isSecurity bool, arch string) (
 	}
 
 	return "", false
+}
+
+func (v *Version) handleConfigmap() {
+	configmap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: make(map[string]string),
+			Name:   "common-variable-" + v.Name,
+		},
+		Data: make(map[string]string),
+	}
+	for k, v := range v.env {
+		configmap.Data[k] = v
+	}
+	v.ConfigMaps = append(v.ConfigMaps, configmap)
 }
