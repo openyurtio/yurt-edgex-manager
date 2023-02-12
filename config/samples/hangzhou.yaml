@@ -4,8 +4,8 @@ metadata:
   name: edgex-sample-hangzhou
 spec:
   version: hanoi
-  poolname: hangzhou
-  additinalservices:
+  poolName: hangzhou
+  additionalServices:
   - metadata:
       name: edgex-device-virtual
     spec:
@@ -18,7 +18,7 @@ spec:
         protocol: TCP
         targetPort: 49990
         nodePort: 30090
-  additinaldeployments:
+  additionalDeployments:
   - metadata:
       name: edgex-device-virtual
     spec:
@@ -41,7 +41,7 @@ spec:
               containerPort: 49990
             envFrom:
             - configMapRef:
-                name: common-variables
+                name: common-variable-hanoi
             env:
               - name: Service_Host
                 value: "edgex-device-virtual"
