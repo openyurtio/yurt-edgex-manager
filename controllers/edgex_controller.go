@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"time"
 
@@ -161,6 +162,13 @@ func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1al
 	} else {
 		desiredComponents = NoSectyComponents[edgex.Spec.Version]
 	}
+
+	additionalComponents, err := annotationToComponent(edgex.Annotations)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	desiredComponents = append(desiredComponents, additionalComponents...)
+
 	//TODO: handle edgex.Spec.Components
 
 	for _, dc := range desiredComponents {
@@ -285,6 +293,13 @@ func (r *EdgeXReconciler) reconcileComponent(ctx context.Context, edgex *devicev
 	} else {
 		desireComponents = NoSectyComponents[edgex.Spec.Version]
 	}
+
+	additionalComponents, err := annotationToComponent(edgex.Annotations)
+	if err != nil {
+		return false, err
+	}
+	desireComponents = append(desireComponents, additionalComponents...)
+
 	//TODO: handle edgex.Spec.Components
 
 	defer func() {
@@ -457,6 +472,52 @@ func (r *EdgeXReconciler) handleYurtAppSet(ctx context.Context, edgex *devicev1a
 		return nil, err
 	}
 	return ud, nil
+}
+
+// For version compatibility, v1alpha1's additionalservice and additionaldeployment are placed in
+// v2alpha2's annotation, this function is to convert the annotation to component.
+func annotationToComponent(annotation map[string]string) ([]*Component, error) {
+	var components []*Component = []*Component{}
+	var additionalDeployments []devicev1alpha1.DeploymentTemplateSpec = make([]devicev1alpha1.DeploymentTemplateSpec, 0)
+	err := json.Unmarshal([]byte(annotation["AdditionalDeployments"]), &additionalDeployments)
+	if err != nil {
+		return nil, err
+	}
+	var additionalServices []devicev1alpha1.ServiceTemplateSpec = make([]devicev1alpha1.ServiceTemplateSpec, 0)
+	err = json.Unmarshal([]byte(annotation["AdditionalServices"]), &additionalServices)
+	if err != nil {
+		return nil, err
+	}
+	var services map[string]*corev1.ServiceSpec = make(map[string]*corev1.ServiceSpec)
+	var usedServices map[string]struct{} = make(map[string]struct{})
+	for _, additionalservice := range additionalServices {
+		services[additionalservice.Name] = &additionalservice.Spec
+	}
+	for _, additionalDeployment := range additionalDeployments {
+		var component Component
+		component.Name = additionalDeployment.Name
+		component.Deployment = &additionalDeployment.Spec
+		service, ok := services[component.Name]
+		if ok {
+			component.Service = service
+			usedServices[component.Name] = struct{}{}
+		}
+		components = append(components, &component)
+	}
+	if len(usedServices) < len(services) {
+		for name, service := range services {
+			_, ok := usedServices[name]
+			if ok {
+				continue
+			}
+			var component Component
+			component.Name = name
+			component.Service = service
+			components = append(components, &component)
+		}
+	}
+
+	return components, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -4,8 +4,8 @@ metadata:
   name: edgex-sample-hangzhou
 spec:
   version: jakarta
-  poolname: hangzhou
-  additinalservices:
+  poolName: beijing
+  additionalServices:
   - metadata:
       name: edgex-device-sak
     spec:
@@ -18,7 +18,7 @@ spec:
         protocol: TCP
         targetPort: 59100
         nodePort: 30090
-  additinaldeployments:
+  additionalDeployments:
   - metadata:
       name: edgex-device-sak
     spec:
@@ -41,9 +41,8 @@ spec:
               containerPort: 59100
             envFrom:
             - configMapRef:
-                name: common-variables
+                name: common-variable-jakarta
             env:
               - name: SERVICE_HOST
                 value: "edgex-device-sak"
-            securityContext:
-                privileged: true
+            
