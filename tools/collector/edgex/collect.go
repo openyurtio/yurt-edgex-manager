@@ -72,18 +72,6 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool, arch string) (*E
 		edgeXConfig.Versions = append(edgeXConfig.Versions, version)
 	}
 
-	// Deal with special circumstances
-	for _, version := range edgeXConfig.Versions {
-		for _, component := range version.Components {
-			for _, cf := range componentSpecialHandlers {
-				cf(component)
-			}
-		}
-		for _, vf := range versionSpecialHandlers {
-			vf(version)
-		}
-	}
-
 	return edgeXConfig, nil
 }
 
@@ -142,12 +130,12 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 				component.image = repo + "/" + image
 			}
 
-			for _, container := range component.Deployment.Template.Spec.Containers {
-				image = container.Image
-				if strings.Contains(image, "/") {
-					container.Image = repo + "/" + strings.Split(image, "/")[1]
+			for i := range component.Deployment.Template.Spec.Containers {
+				image := &component.Deployment.Template.Spec.Containers[i].Image
+				if strings.Contains(*image, "/") {
+					*image = repo + "/" + strings.Split(*image, "/")[1]
 				} else {
-					container.Image = repo + "/" + image
+					*image = repo + "/" + *image
 				}
 			}
 		}

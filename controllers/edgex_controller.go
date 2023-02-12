@@ -314,7 +314,7 @@ NextC:
 			if !apierrors.IsNotFound(err) {
 				return false, err
 			}
-			_, err := r.handleYurtAppSet(ctx, edgex, desireComponent)
+			_, err = r.handleYurtAppSet(ctx, edgex, desireComponent)
 			if err != nil {
 				return false, err
 			}

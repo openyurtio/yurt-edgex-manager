@@ -50,6 +50,12 @@ type Component struct {
 }
 
 func (c *Component) addEnv(envs map[string]*string) {
+	// Deal with special circumstances
+
+	for _, cf := range componentSpecialHandlers {
+		cf(c)
+	}
+
 	for key, v := range envs {
 		if _, ok := (*c.envRef)[key]; !ok {
 			c.componentEnv[key] = *v
@@ -195,12 +201,13 @@ func (c *Component) handleDeployment() {
 	}
 
 	container := corev1.Container{
-		Name:         c.Name,
-		Image:        c.image,
-		Ports:        c.containerPorts,
-		VolumeMounts: c.volumeMounts,
-		EnvFrom:      efss,
-		Env:          envs,
+		Name:            c.Name,
+		Image:           c.image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports:           c.containerPorts,
+		VolumeMounts:    c.volumeMounts,
+		EnvFrom:         efss,
+		Env:             envs,
 	}
 
 	c.Deployment = &appsv1.DeploymentSpec{
@@ -214,6 +221,7 @@ func (c *Component) handleDeployment() {
 			Spec: corev1.PodSpec{
 				Volumes:    c.volumes,
 				Containers: []corev1.Container{container},
+				Hostname:   c.Name,
 			},
 		},
 	}
