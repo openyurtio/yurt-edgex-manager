@@ -246,6 +246,12 @@ func (v *Version) handleConfigmap() {
 		},
 		Data: make(map[string]string),
 	}
+
+	// Deal with special circumstances
+	for _, vf := range versionSpecialHandlers {
+		vf(v)
+	}
+
 	for k, v := range v.env {
 		configmap.Data[k] = v
 	}
