@@ -133,3 +133,21 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 	}
 
 }
+
+func CollectVersionToReport(versions []string, oldManifest *Manifest) *Manifest {
+	manifest := NewManifest()
+	for _, version := range versions {
+		manifest.Versions = append(manifest.Versions, version)
+		if !stringIsInArray(version, oldManifest.Versions) {
+			manifest.LatestVersion = version
+		}
+	}
+
+	manifest.Count = len(manifest.Versions)
+	if oldManifest.Count < len(manifest.Versions) {
+		manifest.Updated = "true"
+	} else {
+		manifest.Updated = "false"
+	}
+	return manifest
+}

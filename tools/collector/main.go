@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"io/ioutil"
+	"os"
 
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
@@ -34,6 +35,7 @@ var (
 	repo                   string
 	amdArch                = "amd"
 	armArch                = "arm"
+	manifestPath           = "../../EdgeXConfig/manifest.yaml"
 )
 
 func main() {
@@ -65,6 +67,32 @@ func Run() error {
 
 	versionsInfo, err := edgex.CollectVersionsInfo()
 	if err != nil {
+		return err
+	}
+
+	var oldManifest edgex.Manifest
+
+	if _, err := os.Stat(manifestPath); err == nil {
+		//file is exist
+		manifestFile, err := ioutil.ReadFile(manifestPath)
+		err = yaml.Unmarshal(manifestFile, &oldManifest)
+		if err != nil {
+			return err
+		}
+	} else {
+		oldManifest = *edgex.NewManifest()
+	}
+
+	manifest := edgex.CollectVersionToReport(versionsInfo, &oldManifest)
+
+	manifestData, err := yaml.Marshal(manifest)
+	if err != nil {
+		logger.Errorln("Fail to parse report config to yaml:", err)
+		return err
+	}
+	err = ioutil.WriteFile(manifestPath, manifestData, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write report yaml:", err)
 		return err
 	}
 
