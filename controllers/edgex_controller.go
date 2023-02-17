@@ -479,14 +479,21 @@ func (r *EdgeXReconciler) handleYurtAppSet(ctx context.Context, edgex *devicev1a
 func annotationToComponent(annotation map[string]string) ([]*Component, error) {
 	var components []*Component = []*Component{}
 	var additionalDeployments []devicev1alpha1.DeploymentTemplateSpec = make([]devicev1alpha1.DeploymentTemplateSpec, 0)
-	err := json.Unmarshal([]byte(annotation["AdditionalDeployments"]), &additionalDeployments)
-	if err != nil {
-		return nil, err
+	if _, ok := annotation["AdditionalDeployments"]; ok {
+		err := json.Unmarshal([]byte(annotation["AdditionalDeployments"]), &additionalDeployments)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var additionalServices []devicev1alpha1.ServiceTemplateSpec = make([]devicev1alpha1.ServiceTemplateSpec, 0)
-	err = json.Unmarshal([]byte(annotation["AdditionalServices"]), &additionalServices)
-	if err != nil {
-		return nil, err
+	if _, ok := annotation["AdditionalServices"]; ok {
+		err := json.Unmarshal([]byte(annotation["AdditionalServices"]), &additionalServices)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(additionalDeployments) == 0 && len(additionalServices) == 0 {
+		return components, nil
 	}
 	var services map[string]*corev1.ServiceSpec = make(map[string]*corev1.ServiceSpec)
 	var usedServices map[string]struct{} = make(map[string]struct{})

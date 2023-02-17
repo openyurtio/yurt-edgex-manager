@@ -45,7 +45,7 @@ spec:
               containerPort: 49990
             envFrom:
             - configMapRef:
-                name: common-variables
+                name: common-variable-hanoi
             env:
               - name: Service_Host
                 value: "edgex-device-virtual"

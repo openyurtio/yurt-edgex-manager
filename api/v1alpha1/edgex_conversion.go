@@ -51,7 +51,7 @@ func (src *EdgeX) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Transform additionalservice
-	if len(src.Spec.AdditionalDeployment) > 0 {
+	if len(src.Spec.AdditionalService) > 0 {
 		additionalService, err := json.Marshal(src.Spec.AdditionalService)
 		if err != nil {
 			return err
@@ -105,6 +105,5 @@ func (dst *EdgeX) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Spec.AdditionalService = additionalServices
 	}
 
-	//TODO: AdditionalService and AdditionalDeployment
 	return nil
 }
