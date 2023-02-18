@@ -134,8 +134,13 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 
 }
 
-func CollectVersionToReport(versions []string, oldManifest *Manifest) *Manifest {
+func CollectVersionToManifest(versionList []Version, oldManifest *Manifest) *Manifest {
+	versions := make([]string, 0)
+	for _, v := range versionList {
+		versions = append(versions, v.Name)
+	}
 	manifest := NewManifest()
+
 	for _, version := range versions {
 		manifest.Versions = append(manifest.Versions, version)
 		if !stringIsInArray(version, oldManifest.Versions) {

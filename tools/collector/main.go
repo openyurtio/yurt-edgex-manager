@@ -70,32 +70,6 @@ func Run() error {
 		return err
 	}
 
-	var oldManifest edgex.Manifest
-
-	if _, err := os.Stat(manifestPath); err == nil {
-		//file is exist
-		manifestFile, err := ioutil.ReadFile(manifestPath)
-		err = yaml.Unmarshal(manifestFile, &oldManifest)
-		if err != nil {
-			return err
-		}
-	} else {
-		oldManifest = *edgex.NewManifest()
-	}
-
-	manifest := edgex.CollectVersionToReport(versionsInfo, &oldManifest)
-
-	manifestData, err := yaml.Marshal(manifest)
-	if err != nil {
-		logger.Errorln("Fail to parse report config to yaml:", err)
-		return err
-	}
-	err = ioutil.WriteFile(manifestPath, manifestData, 0644)
-	if err != nil {
-		logger.Errorln("Fail to write report yaml:", err)
-		return err
-	}
-
 	edgeXConfigAmd, err := edgex.CollectEdgeXConfig(versionsInfo, true, amdArch)
 	if err != nil {
 		return err
@@ -109,6 +83,32 @@ func Run() error {
 	}
 
 	edgex.ModifyImagesName(edgeXConfigAmd, repo)
+
+	var oldManifest edgex.Manifest
+
+	if _, err := os.Stat(manifestPath); err == nil {
+		//file is exist
+		manifestFile, err := ioutil.ReadFile(manifestPath)
+		err = yaml.Unmarshal(manifestFile, &oldManifest)
+		if err != nil {
+			return err
+		}
+	} else {
+		oldManifest = *edgex.NewManifest()
+	}
+
+	manifest := edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
+
+	manifestData, err := yaml.Marshal(manifest)
+	if err != nil {
+		logger.Errorln("Fail to parse report config to yaml:", err)
+		return err
+	}
+	err = ioutil.WriteFile(manifestPath, manifestData, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write report yaml:", err)
+		return err
+	}
 
 	data, err := yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
@@ -131,6 +131,21 @@ func Run() error {
 	}
 
 	edgex.ModifyImagesName(edgeXConfigAmd, repo)
+
+	if manifest.Updated == "false" {
+		manifest = edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
+
+		manifestData, err = yaml.Marshal(manifest)
+		if err != nil {
+			logger.Errorln("Fail to parse report config to yaml:", err)
+			return err
+		}
+		err = ioutil.WriteFile(manifestPath, manifestData, 0644)
+		if err != nil {
+			logger.Errorln("Fail to write report yaml:", err)
+			return err
+		}
+	}
 
 	data, err = yaml.Marshal(edgeXConfigAmd)
 	if err != nil {

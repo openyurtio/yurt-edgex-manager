@@ -1,17 +1,9 @@
 updated: "true"
-count: 13
+count: 5
 latestVersion: levski
 versions:
-    - main
     - levski
-    - semver
     - jakarta
     - kamakura
     - ireland
-    - fuji
-    - edinburgh
-    - delhi
-    - california
-    - barcelona
-    - geneva
     - hanoi
