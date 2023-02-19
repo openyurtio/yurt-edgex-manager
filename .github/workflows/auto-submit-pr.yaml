@@ -1,6 +1,11 @@
 on:
+   push:
+     branches:
+       - main
+       - periodical-collect
    schedule:
-     - cron: '0 10 * * *'
+     - cron: '0-59 * * * *'
+
 name: auto collect info and create pull request
 jobs:
   auto-createPR:
