@@ -101,7 +101,7 @@ func main() {
 	}
 	for _, version := range edgexconfig.Versions {
 		controllers.SecurityComponents[version.Name] = version.Components
-		controllers.SecurityEnv[version.Name] = version.Env
+		controllers.SecurityConfigMaps[version.Name] = version.ConfigMaps
 	}
 	err = yaml.Unmarshal(nosectyContent, &edgexconfig)
 	if err != nil {
@@ -110,7 +110,7 @@ func main() {
 	}
 	for _, version := range edgexconfig.Versions {
 		controllers.NoSectyComponents[version.Name] = version.Components
-		controllers.NoSectyEnv[version.Name] = version.Env
+		controllers.NoSectyConfigMaps[version.Name] = version.ConfigMaps
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

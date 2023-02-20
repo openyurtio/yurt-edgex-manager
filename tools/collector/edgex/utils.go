@@ -17,11 +17,14 @@ limitations under the License.
 package edgex
 
 import (
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+
+	"github.com/compose-spec/compose-go/loader"
+	"github.com/compose-spec/compose-go/types"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -30,6 +33,19 @@ var (
 	pageNotFound   = "404: Not Found"
 	UnifiedPort    uint
 )
+
+// Handle special cases for some versions
+var versionSpecialHandlers = []func(*Version){
+	func(version *Version) {
+		if version.Name == "hanoi" {
+			version.env["SERVICE_SERVERBINDADDR"] = "0.0.0.0"
+			version.env["LOGGING_ENABLEREMOTE"] = "false"
+		}
+	},
+}
+
+// Handle special cases for some components
+var componentSpecialHandlers = []func(*Component){}
 
 func getPage(logger *logrus.Entry, url string) (string, error) {
 	resp, err := http.Get(url)
@@ -95,4 +111,18 @@ func stringIsInArray(target string, strArray []string) bool {
 		}
 	}
 	return false
+}
+
+func getProject(filename, content string) (*types.Project, error) {
+	configs := []types.ConfigFile{{
+		Filename: filename,
+		Content:  []byte(content),
+	}}
+	project, err := loader.Load(types.ConfigDetails{
+		ConfigFiles: configs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return project, nil
 }
