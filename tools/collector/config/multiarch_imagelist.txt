@@ -28,3 +28,5 @@ redis:6.0.9-alpine
 emqx/kuiper:1.1.1-alpine
 kong:2.0.5
 vault:1.5.3
+postgres:12.3-alpine
+kong:2.0.5
