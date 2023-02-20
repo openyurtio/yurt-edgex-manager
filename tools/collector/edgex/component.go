@@ -20,7 +20,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/compose-spec/compose-go/types"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -47,40 +52,30 @@ func NewManifest() *Manifest {
 
 type Component struct {
 	logger       *logrus.Entry
-	Name         string            `yaml:"name"`
-	Image        string            `yaml:"image"`
-	Volumes      []Volume          `yaml:"volumns,omitempty"`
-	Ports        []Port            `yaml:"ports,omitempty"`
-	ComponentEnv map[string]string `yaml:"componentEnv,omitempty"`
+	Name         string                 `yaml:"name"`
+	Service      *corev1.ServiceSpec    `yaml:"service,omitempty"`
+	Deployment   *appsv1.DeploymentSpec `yaml:"deployment,omitempty"`
+	componentEnv map[string]string
 	// A pointer to the Env of the previous level
-	envRef *map[string]string
+	envRef         *map[string]string
+	configmapsRef  *[]corev1.ConfigMap
+	image          string
+	volumes        []corev1.Volume
+	volumeMounts   []corev1.VolumeMount
+	servicePorts   []corev1.ServicePort
+	containerPorts []corev1.ContainerPort
 }
 
-type Volume struct {
-	Name      string `yaml:"name"`
-	HostPath  string `yaml:"hostPath"`
-	MountPath string `yaml:"mountPath"`
-}
+func (c *Component) addEnv(envs map[string]*string) {
+	// Deal with special circumstances
 
-type Port struct {
-	Protocol   string `yaml:"protocol"`
-	Port       int32  `yaml:"port"`
-	TargetPort int32  `yaml:"targetPort"`
-	NodePort   int32  `yaml:"nodePort,omitempty"`
-}
+	for _, cf := range componentSpecialHandlers {
+		cf(c)
+	}
 
-func (c *Component) addEnv(envs map[string]interface{}) {
 	for key, v := range envs {
-		var value string
-		key = strings.ToUpper(key)
-		switch rawValue := v.(type) {
-		case int:
-			value = strconv.FormatInt(int64(rawValue), formatIntBase)
-		case string:
-			value = rawValue
-		}
 		if _, ok := (*c.envRef)[key]; !ok {
-			c.ComponentEnv[key] = value
+			c.componentEnv[key] = *v
 		}
 	}
 }
@@ -88,145 +83,163 @@ func (c *Component) addEnv(envs map[string]interface{}) {
 const (
 	volumesSplitMinLen        = 2
 	anonymousVolumeNamePrefix = "anonymous-volume"
+	tmpfsVolumeNamePrefix     = "tmpfs-volume"
 )
 
-func (c *Component) fillVolumes(volumes []interface{}) {
-	logger := c.logger
+var HostPathType = corev1.HostPathDirectoryOrCreate
+
+func (c *Component) fillVolumes(volumes []types.ServiceVolumeConfig) {
+	_ = c.logger
+	count := 1
 	for _, v := range volumes {
-		volumeStr, ok := v.(string)
-		if volumeStr == "" || !ok {
-			logger.Warningln("This is not a valid volume", "value:", v)
-			continue
-		}
-		infos := strings.Split(volumeStr, ":")
-		if len(infos) < volumesSplitMinLen {
-			logger.Warningln("This is not a valid volume", "value:", v)
-			continue
-		}
-		if volumeStr[0] == '/' {
-			// Like this value: /var/run/docker.sock:/var/run/docker.sock:z
-			volume := Volume{
-				Name:      "",
-				HostPath:  infos[0],
-				MountPath: infos[1],
-			}
-			c.Volumes = append(c.Volumes, volume)
-		} else {
+		var volume corev1.Volume
+		var volumeMount corev1.VolumeMount
+		switch v.Type {
+		case "volume":
 			// Like this value: edgex-init:/edgex-init:ro,z
-			volume := Volume{
-				Name: infos[0],
-				// For non-mapped volumes, we should set it to emptyDir
-				// to prevent legacy configurations from being read when the component restarts
-				HostPath:  "",
-				MountPath: infos[1],
+			name := v.Source
+			volume = corev1.Volume{
+				Name: name,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
 			}
-			c.Volumes = append(c.Volumes, volume)
+			volumeMount = corev1.VolumeMount{
+				Name:      name,
+				MountPath: v.Target,
+			}
+		case "bind":
+			// Like this value: /var/run/docker.sock:/var/run/docker.sock:z
+			name := anonymousVolumeNamePrefix + strconv.FormatInt(int64(count), formatIntBase)
+			count++
+			volume = corev1.Volume{
+				Name: name,
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: v.Source,
+						Type: &HostPathType,
+					},
+				},
+			}
+			volumeMount = corev1.VolumeMount{
+				Name:      name,
+				MountPath: v.Target,
+			}
 		}
+		c.volumes = append(c.volumes, volume)
+		c.volumeMounts = append(c.volumeMounts, volumeMount)
 	}
-	c.repairVolumes()
 }
 
-func (c *Component) fillTmpfs(tmpfs []interface{}) {
+func (c *Component) fillTmpfs(tmpfs types.StringList) {
 	logger := c.logger
-	for _, v := range tmpfs {
-		tmpfsStr, ok := v.(string)
-		if tmpfsStr == "" || !ok {
-			logger.Warningln("This is not a valid tmpfs", "value:", v)
+	count := 1
+	for _, tmpfsStr := range tmpfs {
+		if tmpfsStr == "" {
+			logger.Warningln("This is not a valid tmpfs", "value:", tmpfsStr)
 			continue
 		}
-		volume := Volume{
-			Name: "",
+
+		name := tmpfsVolumeNamePrefix + strconv.FormatInt(int64(count), formatIntBase)
+		count++
+		volume := corev1.Volume{
+			Name: name,
 			// For tmpfs, we should set it to emptyDir
 			// to prevent legacy configurations from being read when the component restarts
-			HostPath:  "",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		}
+		volumeMount := corev1.VolumeMount{
+			Name:      name,
 			MountPath: tmpfsStr,
 		}
-		c.Volumes = append(c.Volumes, volume)
+		c.volumes = append(c.volumes, volume)
+		c.volumeMounts = append(c.volumeMounts, volumeMount)
 	}
 }
 
-func (c *Component) repairVolumes() {
-	count := 1
-	for i := range c.Volumes {
-		if c.Volumes[i].Name == "" {
-			c.Volumes[i].Name = anonymousVolumeNamePrefix + strconv.FormatInt(int64(count), formatIntBase)
-			count++
-		}
-	}
-}
-
-const (
-	portsSplitIgnoreProtocol = 1
-	portsSplitWithProtocol   = 2
-
-	reflectSamePort       = 1
-	reflectPortOutCluster = 2
-	reflectPortInCluster  = 3
-)
-
-func (c *Component) fillPorts(ports []interface{}) {
+func (c *Component) fillPorts(ports []types.ServicePortConfig) {
 	logger := c.logger
 	for _, v := range ports {
-		portStr, ok := v.(string)
-		if portStr == "" || !ok {
-			logger.Warningln("This is not a valid port", "value:", v)
+		hostPort, err := strconv.ParseInt(v.Published, 10, 32)
+		if err != nil {
+			logger.Warningln("This is not a valid HostPort", "value", v.HostIP)
 			continue
 		}
 
-		port := Port{}
-
-		// Parse protocol and supplement default tcp protocol
-		portAndProtocol := strings.Split(portStr, "/")
-		if len(portAndProtocol) == portsSplitIgnoreProtocol {
-			port.Protocol = "TCP"
-		} else if len(portAndProtocol) == portsSplitWithProtocol {
-			port.Protocol = strings.ToUpper(portAndProtocol[portsSplitWithProtocol-1])
-		} else {
-			logger.Warningln("This is not a valid port", "value:", v)
-			continue
+		name := strings.ToLower(v.Protocol) + "-" + strconv.FormatInt(int64(hostPort), 10)
+		servicePort := corev1.ServicePort{
+			Name:       name,
+			Protocol:   corev1.Protocol(strings.ToUpper(v.Protocol)),
+			Port:       int32(hostPort),
+			TargetPort: intstr.FromInt(int(v.Target)),
 		}
-
-		portInfo := strings.Split(portAndProtocol[0], ":")
-
-		if len(portInfo) == reflectSamePort {
-			portNum, err := strconv.ParseInt(portInfo[0], parseIntBase, parseIntBaseBitSize)
-			if err != nil {
-				logger.Warningln("This is not a valid port", "value:", v)
-				continue
-			}
-			port.Port = int32(portNum)
-			port.TargetPort = int32(portNum)
-		} else if len(portInfo) == reflectPortOutCluster {
-			portNumInCluster, err := strconv.ParseInt(portInfo[0], parseIntBase, parseIntBaseBitSize)
-			if err != nil {
-				logger.Warningln("This is not a valid port", "value:", v)
-				continue
-			}
-			portNumOutCluster, err := strconv.ParseInt(portInfo[1], parseIntBase, parseIntBaseBitSize)
-			if err != nil {
-				logger.Warningln("This is not a valid port", "value:", v)
-				continue
-			}
-			port.Port = int32(portNumInCluster)
-			port.TargetPort = int32(portNumInCluster)
-			port.NodePort = int32(portNumOutCluster)
-		} else if len(portInfo) == reflectPortInCluster {
-			portNumPort, err := strconv.ParseInt(portInfo[1], parseIntBase, parseIntBaseBitSize)
-			if err != nil {
-				logger.Warningln("This is not a valid port", "value:", v)
-				continue
-			}
-			portNumTargetPort, err := strconv.ParseInt(portInfo[2], parseIntBase, parseIntBaseBitSize)
-			if err != nil {
-				logger.Warningln("This is not a valid port", "value:", v)
-				continue
-			}
-			port.Port = int32(portNumPort)
-			port.TargetPort = int32(portNumTargetPort)
-		} else {
-			logger.Warningln("This is not a valid port", "value:", v)
-			continue
+		containerPort := corev1.ContainerPort{
+			Name:          name,
+			Protocol:      corev1.Protocol(strings.ToUpper(v.Protocol)),
+			ContainerPort: int32(v.Target),
 		}
-		c.Ports = append(c.Ports, port)
+		c.servicePorts = append(c.servicePorts, servicePort)
+		c.containerPorts = append(c.containerPorts, containerPort)
+	}
+}
+
+func (c *Component) handleService() {
+	if len(c.servicePorts) > 0 {
+		c.Service = &corev1.ServiceSpec{
+			Selector: map[string]string{"app": c.Name},
+			Ports:    c.servicePorts,
+		}
+	} else {
+		c.Service = nil
+	}
+}
+
+func (c *Component) handleDeployment() {
+	envs := []corev1.EnvVar{}
+	for k, v := range c.componentEnv {
+		envs = append(envs, corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
+	}
+
+	efss := []corev1.EnvFromSource{}
+	for _, configmap := range *c.configmapsRef {
+		efs := corev1.EnvFromSource{
+			ConfigMapRef: &corev1.ConfigMapEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configmap.Name,
+				},
+			},
+		}
+		efss = append(efss, efs)
+	}
+
+	container := corev1.Container{
+		Name:            c.Name,
+		Image:           c.image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports:           c.containerPorts,
+		VolumeMounts:    c.volumeMounts,
+		EnvFrom:         efss,
+		Env:             envs,
+	}
+
+	c.Deployment = &appsv1.DeploymentSpec{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"app": c.Name},
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{"app": c.Name},
+			},
+			Spec: corev1.PodSpec{
+				Volumes:    c.volumes,
+				Containers: []corev1.Container{container},
+				Hostname:   c.Name,
+			},
+		},
 	}
 }

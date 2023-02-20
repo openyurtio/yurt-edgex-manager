@@ -71,7 +71,7 @@ func CollectEdgeXConfig(versionsInfo []string, isSecurity bool, arch string) (*E
 			logger.Warningln("The configuration file of this version cannot be captured")
 			continue
 		}
-		edgeXConfig.Versions = append(edgeXConfig.Versions, *version)
+		edgeXConfig.Versions = append(edgeXConfig.Versions, version)
 	}
 
 	return edgeXConfig, nil
@@ -96,12 +96,12 @@ func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 		components := version.Components
 		newArray := make([]string, 0)
 		for j := range components {
-			imgSplit := strings.Split(versionsArm[i].Components[j].Image, ":")[0]
+			imgSplit := strings.Split(versionsArm[i].Components[j].image, ":")[0]
 			newArray = append(newArray, imgSplit)
 		}
 
 		for _, component := range components {
-			image := component.Image
+			image := component.image
 			if !stringIsInArray(strings.Split(image, ":")[0], newArray) {
 				writerSingleArch.WriteString(image + " ")
 				imgArr := strings.Split(image, ":")
@@ -122,14 +122,23 @@ func CollectImages(edgexConfig, edgeXConfigArm *EdgeXConfig) error {
 
 func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 	versions := edgexConfig.Versions
-	for i, version := range versions {
+	for _, version := range versions {
 		components := version.Components
-		for j, component := range components {
-			image := component.Image
+		for _, component := range components {
+			image := component.image
 			if strings.Contains(image, "/") {
-				edgexConfig.Versions[i].Components[j].Image = repo + "/" + strings.Split(image, "/")[1]
+				component.image = repo + "/" + strings.Split(image, "/")[1]
 			} else {
-				edgexConfig.Versions[i].Components[j].Image = repo + "/" + image
+				component.image = repo + "/" + image
+			}
+
+			for i := range component.Deployment.Template.Spec.Containers {
+				image := &component.Deployment.Template.Spec.Containers[i].Image
+				if strings.Contains(*image, "/") {
+					*image = repo + "/" + strings.Split(*image, "/")[1]
+				} else {
+					*image = repo + "/" + *image
+				}
 			}
 		}
 	}
