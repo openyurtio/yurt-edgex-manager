@@ -1,10 +1,9 @@
 on:
-   push:
-     branches:
-       - main
-       - periodical-collect
-   schedule:
-     - cron: '10 * * * *'
+  push:
+    branches:
+      - action-dev
+  schedule:
+    - cron: '10 * * * *'
 
 name: auto collect info and create pull request
 jobs:
