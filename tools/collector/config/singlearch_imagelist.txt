@@ -61,5 +61,7 @@ edgexfoundry/docker-security-secretstore-setup-go:1.3.1  edgexfoundry/docker-sec
 edgexfoundry/docker-core-data-go:1.3.1  edgexfoundry/docker-core-data-go-arm64:1.3.1
 edgexfoundry/docker-sys-mgmt-agent-go:1.3.1  edgexfoundry/docker-sys-mgmt-agent-go-arm64:1.3.1
 edgexfoundry/docker-security-proxy-setup-go:1.3.1  edgexfoundry/docker-security-proxy-setup-go-arm64:1.3.1
-edgexfoundry/docker-device-virtual-go:1.3.1  edgexfoundry/docker-device-virtual-go-arm64:1.3.1
-edgexfoundry/docker-security-bootstrap-redis-go:1.3.1  edgexfoundry/docker-security-bootstrap-redis-go-arm64:1.3.1
+edgexfoundry/docker-security-secrets-setup-go:1.3.1  edgexfoundry/docker-security-secrets-setup-go-arm64:1.3.1
+edgexfoundry/docker-core-command-go:1.3.1  edgexfoundry/docker-core-command-go-arm64:1.3.1
+edgexfoundry/docker-device-rest-go:1.2.1  edgexfoundry/docker-device-rest-go-arm64:1.2.1
+edgexfoundry/docker-edgex-consul:1.3.0  edgexfoundry/docker-edgex-consul-arm64:1.3.0

@@ -1,7 +1,6 @@
 on:
   push:
     branches:
-      - periodical-collect
       - action-dev
   schedule:
     - cron: '10 * * * *'

@@ -1,7 +1,8 @@
 updated: "false"
-count: 4
-latestVersion: hanoi
+count: 5
+latestVersion: levski
 versions:
+    - levski
     - jakarta
     - kamakura
     - ireland
