@@ -14,6 +14,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
@@ -39,7 +41,26 @@ func (src *EdgeX) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Status.UnreadyComponentNum = src.Status.DeploymentReplicas - src.Status.DeploymentReadyReplicas
 	dst.Status.Conditions = src.Status.Conditions
 
+	// Transform additionaldeployment
+	if len(src.Spec.AdditionalDeployment) > 0 {
+		additionalDeployment, err := json.Marshal(src.Spec.AdditionalDeployment)
+		if err != nil {
+			return err
+		}
+		dst.ObjectMeta.Annotations["AdditionalDeployments"] = string(additionalDeployment)
+	}
+
+	// Transform additionalservice
+	if len(src.Spec.AdditionalService) > 0 {
+		additionalService, err := json.Marshal(src.Spec.AdditionalService)
+		if err != nil {
+			return err
+		}
+		dst.ObjectMeta.Annotations["AdditionalServices"] = string(additionalService)
+	}
+
 	//TODO: Components
+
 	return nil
 }
 func (dst *EdgeX) ConvertFrom(srcRaw conversion.Hub) error {
@@ -64,6 +85,25 @@ func (dst *EdgeX) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Status.DeploymentReplicas = src.Status.ReadyComponentNum + src.Status.UnreadyComponentNum
 	dst.Status.Conditions = src.Status.Conditions
 
-	//TODO: AdditionalService and AdditionalDeployment
+	// Transform additionaldeployment
+	if _, ok := src.ObjectMeta.Annotations["AdditionalDeployments"]; ok {
+		var additionalDeployments []DeploymentTemplateSpec = make([]DeploymentTemplateSpec, 0)
+		err := json.Unmarshal([]byte(src.ObjectMeta.Annotations["AdditionalDeployments"]), &additionalDeployments)
+		if err != nil {
+			return err
+		}
+		dst.Spec.AdditionalDeployment = additionalDeployments
+	}
+
+	// Transform additionalservice
+	if _, ok := src.ObjectMeta.Annotations["AdditionalServices"]; ok {
+		var additionalServices []ServiceTemplateSpec = make([]ServiceTemplateSpec, 0)
+		err := json.Unmarshal([]byte(src.ObjectMeta.Annotations["AdditionalServices"]), &additionalServices)
+		if err != nil {
+			return err
+		}
+		dst.Spec.AdditionalService = additionalServices
+	}
+
 	return nil
 }
