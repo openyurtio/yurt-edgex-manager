@@ -147,6 +147,9 @@ func CollectVersionToManifest(versionList []Version, oldManifest *Manifest) *Man
 			manifest.LatestVersion = version
 		}
 	}
+	if manifest.LatestVersion == "" {
+		manifest.LatestVersion = oldManifest.LatestVersion
+	}
 
 	manifest.Count = len(manifest.Versions)
 	if oldManifest.Count < len(manifest.Versions) {
