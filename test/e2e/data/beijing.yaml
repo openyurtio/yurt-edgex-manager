@@ -45,7 +45,7 @@ spec:
               containerPort: 59900
             envFrom:
             - configMapRef:
-                name: common-variables
+                name: common-variable-jakarta
             env:
               - name: Service_Host
                 value: "edgex-device-virtual"

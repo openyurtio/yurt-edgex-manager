@@ -143,7 +143,7 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 
 }
 
-func CollectVersionToManifest(versionList []Version, oldManifest *Manifest) *Manifest {
+func CollectVersionToManifest(versionList []*Version, oldManifest *Manifest) *Manifest {
 	versions := make([]string, 0)
 	for _, v := range versionList {
 		versions = append(versions, v.Name)

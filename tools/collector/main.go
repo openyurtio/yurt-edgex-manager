@@ -18,12 +18,11 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
-	"os"
-
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"os"
 )
 
 var (
