@@ -18,9 +18,7 @@ package edgex
 
 import (
 	"bufio"
-	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -145,9 +143,7 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 
 }
 
-func CollectVersionToManifest(versionList []Version, oldManifest *Manifest) *Manifest {
-	fmt.Println("type of versionList:", reflect.TypeOf(versionList))
-
+func CollectVersionToManifest(versionList []*Version, oldManifest *Manifest) *Manifest {
 	versions := make([]string, 0)
 	for _, v := range versionList {
 		versions = append(versions, v.Name)

@@ -18,14 +18,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"reflect"
-
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"os"
 )
 
 var (
@@ -98,7 +95,7 @@ func Run() error {
 	} else {
 		oldManifest = *edgex.NewManifest()
 	}
-	fmt.Println("type of edgeXConfigAmd.Versions:", reflect.TypeOf(edgeXConfigAmd.Versions))
+
 	manifest := edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
 
 	data, err := yaml.Marshal(edgeXConfigAmd)
