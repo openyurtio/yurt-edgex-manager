@@ -25,5 +25,5 @@ consul:1.9.5
 emqx/kuiper:1.1.1-alpine
 postgres:12.3-alpine
 vault:1.5.3
-postgres:12.3-alpine
 kong:2.0.5
+redis:6.0.9-alpine
