@@ -71,19 +71,19 @@ type EdgeXReconciler struct {
 }
 
 type EdgeXConfig struct {
-	Versions []*Version `yaml:"versions"`
+	Versions []*Version `yaml:"versions,omitempty" json:"versions,omitempty"`
 }
 
 type Version struct {
-	Name       string             `yaml:"versionName"`
-	ConfigMaps []corev1.ConfigMap `yaml:"configMaps,omitempty"`
-	Components []*Component       `yaml:"components,omitempty"`
+	Name       string             `yaml:"versionName" json:"versionName"`
+	ConfigMaps []corev1.ConfigMap `yaml:"configMaps,omitempty" json:"configMaps,omitempty"`
+	Components []*Component       `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 type Component struct {
-	Name       string                 `yaml:"name"`
-	Service    *corev1.ServiceSpec    `yaml:"service,omitempty"`
-	Deployment *appsv1.DeploymentSpec `yaml:"deployment,omitempty"`
+	Name       string                 `yaml:"name" json:"name"`
+	Service    *corev1.ServiceSpec    `yaml:"service,omitempty" json:"service,omitempty"`
+	Deployment *appsv1.DeploymentSpec `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 }
 
 var (
@@ -154,7 +154,6 @@ func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 }
 
 func (r *EdgeXReconciler) reconcileDelete(ctx context.Context, edgex *devicev1alpha2.EdgeX) (ctrl.Result, error) {
-
 	ud := &unitv1alpha1.YurtAppSet{}
 	var desiredComponents []*Component
 	if edgex.Spec.Security {

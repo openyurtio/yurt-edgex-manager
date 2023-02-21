@@ -18,12 +18,12 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"flag"
 	"os"
 
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
 	edgexwebhook "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex"
-	"gopkg.in/yaml.v2"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -46,8 +46,8 @@ import (
 var (
 	scheme       = runtime.NewScheme()
 	setupLog     = ctrl.Log.WithName("setup")
-	securityFile = "EdgeXConfig/config.yaml"
-	nosectyFile  = "EdgeXConfig/config-nosecty.yaml"
+	securityFile = "EdgeXConfig/config.json"
+	nosectyFile  = "EdgeXConfig/config-nosecty.json"
 	//go:embed EdgeXConfig
 	edgeXconfig embed.FS
 )
@@ -93,8 +93,13 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "File to open the embed EdgeX nosecty config")
 	}
-	var edgexconfig controllers.EdgeXConfig
-	err = yaml.Unmarshal(securityContent, &edgexconfig)
+
+	var (
+		edgexconfig        = controllers.EdgeXConfig{}
+		edgexnosectyconfig = controllers.EdgeXConfig{}
+	)
+
+	err = json.Unmarshal(securityContent, &edgexconfig)
 	if err != nil {
 		setupLog.Error(err, "Error security edgeX configuration file")
 		os.Exit(1)
@@ -103,12 +108,13 @@ func main() {
 		controllers.SecurityComponents[version.Name] = version.Components
 		controllers.SecurityConfigMaps[version.Name] = version.ConfigMaps
 	}
-	err = yaml.Unmarshal(nosectyContent, &edgexconfig)
+
+	err = json.Unmarshal(nosectyContent, &edgexnosectyconfig)
 	if err != nil {
 		setupLog.Error(err, "Error nosecty edgeX configuration file")
 		os.Exit(1)
 	}
-	for _, version := range edgexconfig.Versions {
+	for _, version := range edgexnosectyconfig.Versions {
 		controllers.NoSectyComponents[version.Name] = version.Components
 		controllers.NoSectyConfigMaps[version.Name] = version.ConfigMaps
 	}

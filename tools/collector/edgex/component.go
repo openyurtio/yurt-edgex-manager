@@ -35,9 +35,9 @@ const (
 
 type Component struct {
 	logger       *logrus.Entry
-	Name         string                 `yaml:"name"`
-	Service      *corev1.ServiceSpec    `yaml:"service,omitempty"`
-	Deployment   *appsv1.DeploymentSpec `yaml:"deployment,omitempty"`
+	Name         string                 `yaml:"name" json:"name"`
+	Service      *corev1.ServiceSpec    `yaml:"service,omitempty" json:"service,omitempty"`
+	Deployment   *appsv1.DeploymentSpec `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	componentEnv map[string]string
 	// A pointer to the Env of the previous level
 	envRef         *map[string]string

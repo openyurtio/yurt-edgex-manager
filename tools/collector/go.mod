@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/compose-spec/compose-go v1.9.0
 	github.com/joho/godotenv v1.4.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 )
@@ -41,5 +40,5 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/sys v0.3.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0
 )
