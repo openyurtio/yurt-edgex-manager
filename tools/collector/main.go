@@ -18,11 +18,11 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
-
 	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"os"
 )
 
 var (
@@ -34,6 +34,7 @@ var (
 	repo                   string
 	amdArch                = "amd"
 	armArch                = "arm"
+	manifestPath           = "../../EdgeXConfig/manifest.yaml"
 )
 
 func main() {
@@ -82,6 +83,21 @@ func Run() error {
 
 	edgex.ModifyImagesName(edgeXConfigAmd, repo)
 
+	var oldManifest edgex.Manifest
+
+	if _, err := os.Stat(manifestPath); err == nil {
+		//file is exist
+		manifestFile, err := ioutil.ReadFile(manifestPath)
+		err = yaml.Unmarshal(manifestFile, &oldManifest)
+		if err != nil {
+			return err
+		}
+	} else {
+		oldManifest = *edgex.NewManifest()
+	}
+
+	manifest := edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
+
 	data, err := yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex config to yaml:", err)
@@ -103,6 +119,22 @@ func Run() error {
 	}
 
 	edgex.ModifyImagesName(edgeXConfigAmd, repo)
+
+	if manifest.Updated == "false" {
+		manifest = edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
+	}
+
+	//write in the file
+	manifestData, err := yaml.Marshal(manifest)
+	if err != nil {
+		logger.Errorln("Fail to parse manifest config to yaml:", err)
+		return err
+	}
+	err = ioutil.WriteFile(manifestPath, manifestData, 0644)
+	if err != nil {
+		logger.Errorln("Fail to write manifest yaml:", err)
+		return err
+	}
 
 	data, err = yaml.Marshal(edgeXConfigAmd)
 	if err != nil {
