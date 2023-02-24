@@ -140,7 +140,6 @@ func ModifyImagesName(edgexConfig *EdgeXConfig, repo string) {
 			}
 		}
 	}
-
 }
 
 func CollectVersionToManifest(versionList []*Version, oldManifest *Manifest) *Manifest {

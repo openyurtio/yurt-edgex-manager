@@ -17,19 +17,21 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
-	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
+
+	"github.com/openyurtio/yurt-edgex-manager/tools/collector/edgex"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var (
 	collectLog             = logrus.New()
-	saveSectyConfigPath    = "../../EdgeXConfig/config.yaml"
-	saveSectyConfigPathArm = "../../EdgeXConfig/config.yaml"
-	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.yaml"
+	saveSectyConfigPath    = "../../EdgeXConfig/config.json"
+	saveSectyConfigPathArm = "../../EdgeXConfig/config.json"
+	saveNoSectyConfigPath  = "../../EdgeXConfig/config-nosecty.json"
 	debug                  bool
 	repo                   string
 	amdArch                = "amd"
@@ -75,6 +77,9 @@ func Run() error {
 	}
 
 	edgeXConfigArm, err := edgex.CollectEdgeXConfig(versionsInfo, true, armArch)
+	if err != nil {
+		return err
+	}
 
 	err = edgex.CollectImages(edgeXConfigAmd, edgeXConfigArm)
 	if err != nil {
@@ -88,6 +93,10 @@ func Run() error {
 	if _, err := os.Stat(manifestPath); err == nil {
 		//file is exist
 		manifestFile, err := ioutil.ReadFile(manifestPath)
+		if err != nil {
+			return err
+		}
+
 		err = yaml.Unmarshal(manifestFile, &oldManifest)
 		if err != nil {
 			return err
@@ -98,7 +107,7 @@ func Run() error {
 
 	manifest := edgex.CollectVersionToManifest(edgeXConfigAmd.Versions, &oldManifest)
 
-	data, err := yaml.Marshal(edgeXConfigAmd)
+	data, err := json.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex config to yaml:", err)
 		return err
@@ -136,7 +145,7 @@ func Run() error {
 		return err
 	}
 
-	data, err = yaml.Marshal(edgeXConfigAmd)
+	data, err = json.Marshal(edgeXConfigAmd)
 	if err != nil {
 		logger.Errorln("Fail to parse edgex-nosecty config to yaml:", err)
 		return err

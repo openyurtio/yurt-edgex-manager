@@ -39,6 +39,9 @@ spec:
       jsonPath: .status.deploymentReadyReplicas
       name: ReadyDeployment
       type: integer
+    deprecated: true
+    deprecationWarning: device.openyurt.io/v1alpha1 EdgeX will be deprecated in future;
+      use device.openyurt.io/v1alpha2 EdgeX
     name: v1alpha1
     schema:
       openAPIV3Schema:

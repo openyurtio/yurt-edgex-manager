@@ -12,7 +12,7 @@ env:
 
 jobs:
   golangci-lint:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
           args: --disable-all  -E deadcode -E gofmt -E goimports -E ineffassign -E misspell -E vet --timeout=15m
 
   markdownlint-misspell-shellcheck:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # this image is build from Dockerfile
     # https://github.com/pouchcontainer/pouchlinter/blob/master/Dockerfile
     container: pouchcontainer/pouchlinter:v0.1.2
@@ -42,7 +42,7 @@ jobs:
         run: find  ./ -name  "*.md" | grep -v enhancements |  grep -v .github |  xargs mdl -r ~MD010,~MD013,~MD014,~MD022,~MD024,~MD029,~MD031,~MD032,~MD033,~MD034,~MD036
 
   UnitTest:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:

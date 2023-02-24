@@ -36,15 +36,15 @@ var (
 )
 
 type EdgeXConfig struct {
-	Versions []*Version `yaml:"versions"`
+	Versions []*Version `yaml:"versions,omitempty" json:"versions,omitempty"`
 }
 
 type Version struct {
 	logger     *logrus.Entry
 	env        map[string]string
-	Name       string             `yaml:"versionName"`
-	ConfigMaps []corev1.ConfigMap `yaml:"configMaps,omitempty"`
-	Components []*Component       `yaml:"components,omitempty"`
+	Name       string             `yaml:"versionName" json:"versionName"`
+	ConfigMaps []corev1.ConfigMap `yaml:"configMaps,omitempty" json:"configMaps,omitempty"`
+	Components []*Component       `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 func newVersion(logger *logrus.Entry, name string) *Version {
@@ -89,9 +89,36 @@ func (v *Version) catch(isSecurity bool, arch string) error {
 		return ErrConfigFileNotFound
 	}
 
-	err = v.catchYML(filename)
+	versionURL := rawVersionURLPrefix + v.Name + "/" + filename
+
+	pageStr, err := getPage(logger, versionURL)
 	if err != nil {
 		return err
+	}
+
+	project, err := getProject(filename, pageStr)
+	if err != nil {
+		return err
+	}
+
+	v.handleConfigmap()
+
+	for _, rawComponent := range project.Services {
+		// Get the hostname and image information to create the component as basic information
+		hostname := rawComponent.Hostname
+		image := rawComponent.Image
+		component := v.newComponent(hostname, image)
+
+		// Collect information for each component
+		component.addEnv(rawComponent.Environment)
+		component.fillTmpfs(rawComponent.Tmpfs)
+		component.fillVolumes(rawComponent.Volumes)
+		component.fillPorts(rawComponent.Ports)
+
+		component.handleService()
+		component.handleDeployment()
+
+		v.Components = append(v.Components, component)
 	}
 
 	return nil
