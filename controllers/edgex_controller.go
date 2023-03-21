@@ -19,6 +19,11 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"reflect"
 	"time"
 
@@ -91,6 +96,8 @@ var (
 	NoSectyComponents  map[string][]*Component       = make(map[string][]*Component)
 	SecurityConfigMaps map[string][]corev1.ConfigMap = make(map[string][]corev1.ConfigMap)
 	NoSectyConfigMaps  map[string][]corev1.ConfigMap = make(map[string][]corev1.ConfigMap)
+
+	optional = sets.NewString("edgex-app-rules-engine", "edgex-core-data", "edgex-device-rest", "edgex-kuiper", "edgex-support-notifications", "edgex-support-scheduler", "edgex-sys-mgmt-agent", "edgex-ui-go")
 )
 
 //+kubebuilder:rbac:groups=device.openyurt.io,resources=edgexes,verbs=get;list;watch;create;update;patch;delete
@@ -101,6 +108,7 @@ var (
 //+kubebuilder:rbac:groups=apps.openyurt.io,resources=yurtappsets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=configmaps;services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=configmaps/status;services/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 
 func (r *EdgeXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
@@ -292,6 +300,21 @@ func (r *EdgeXReconciler) reconcileComponent(ctx context.Context, edgex *devicev
 	} else {
 		desireComponents = NoSectyComponents[edgex.Spec.Version]
 	}
+
+	// add yurt-device-controller
+	devCtrl, err := r.provisionDeviceController(ctx)
+	if err != nil {
+		return false, err
+	}
+	desireComponents = append(desireComponents, devCtrl)
+
+	filteredComponents := make([]*Component, 0)
+	for _, it := range desireComponents {
+		if !optional.Has(it.Name) {
+			filteredComponents = append(filteredComponents, it)
+		}
+	}
+	desireComponents = filteredComponents
 
 	additionalComponents, err := annotationToComponent(edgex.Annotations)
 	if err != nil {
@@ -544,4 +567,82 @@ func (r *EdgeXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForOwner{OwnerType: ControlledType, IsController: false},
 		).
 		Complete(r)
+}
+
+// provisionDeviceController prepares deployment spec for component yurt-device-controller
+func (r *EdgeXReconciler) provisionDeviceController(ctx context.Context) (*Component, error) {
+	logger := log.FromContext(ctx)
+	ver, ns, err := util.DefaultVersion(ctx, r.Client)
+	if err != nil {
+		logger.Error(err, "get default version failed")
+		return nil, err
+	}
+	deviceCtrComponent := &Component{
+		Name: "yurt-device-controller",
+		Deployment: &appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app":           "yurt-device-controller",
+						"control-plane": "controller-manager",
+					},
+					Namespace: ns,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:            "yurt-device-controller",
+							Image:           fmt.Sprintf("openyurt/yurt-device-controller:%s", ver),
+							ImagePullPolicy: corev1.PullAlways,
+							Command:         []string{"/yurt-device-controller"},
+							Args: []string{
+								"--health-probe-bind-address=:8081",
+								"--metrics-bind-address=127.0.0.1:8080",
+								"--leader-elect=false",
+							},
+							LivenessProbe: &corev1.Probe{
+								InitialDelaySeconds: 15,
+								PeriodSeconds:       20,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt(8081),
+									},
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/readyz",
+										Port: intstr.FromInt(8081),
+									},
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("512m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1024m"),
+									corev1.ResourceMemory: resource.MustParse("512Mi"),
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: pointer.Bool(false),
+							},
+						},
+					},
+					TerminationGracePeriodSeconds: pointer.Int64(10),
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(65532),
+					},
+				},
+			},
+		},
+		Service: nil, // yurt-device-controller doesn't need a service yet
+	}
+	return deviceCtrComponent, nil
 }
