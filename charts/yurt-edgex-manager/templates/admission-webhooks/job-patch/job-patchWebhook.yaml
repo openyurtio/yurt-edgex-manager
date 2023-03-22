@@ -36,6 +36,7 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --secret-name={{ template "yurtedgex.fullname" . }}-admission
             - --patch-failure-policy={{ .Values.admissionWebhooks.failurePolicy }}
+            - --crds={"name":"edgexes.device.openyurt.io","conversion":{"strategy":"Webhook","webhook":{"clientConfig":{"service":{"name":"{{ template "yurtedgex.name" . }}-webhook","namespace":"default","path":"/convert","port":443}},"conversionReviewVersions":["v1"]}}}
             - --patch-mutating=true
       restartPolicy: OnFailure
       serviceAccountName: {{ template "yurtedgex.fullname" . }}-admission
