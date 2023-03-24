@@ -40,7 +40,7 @@ kind: Deployment
 metadata:
   labels:
   {{- include "yurtedgex.labels" . | nindent 4 }}
-  name: {{ template "yurtedgex.name" . }}-controller
+  name: {{ template "yurtedgex.name" . }}
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1

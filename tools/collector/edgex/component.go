@@ -93,6 +93,12 @@ func (c *Component) fillVolumes(volumes []types.ServiceVolumeConfig) {
 			}
 		case "bind":
 			// Like this value: /var/run/docker.sock:/var/run/docker.sock:z
+
+			// Because the runtime of k8s varies, omit this volume when converting docker-compose into k8s configuration
+			if v.Source == "/var/run/docker.sock" {
+				continue
+			}
+
 			name := anonymousVolumeNamePrefix + strconv.FormatInt(int64(count), formatIntBase)
 			count++
 			volume = corev1.Volume{
