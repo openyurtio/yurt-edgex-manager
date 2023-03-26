@@ -8,18 +8,19 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  - v2
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-device-openyurt-io-v1alpha1-edgex
+      path: /mutate-device-openyurt-io-v1alpha2-edgex
   failurePolicy: Fail
   name: medgex.kb.io
   rules:
   - apiGroups:
     - device.openyurt.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -36,18 +37,19 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  - v2
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-device-openyurt-io-v1alpha1-edgex
+      path: /validate-device-openyurt-io-v1alpha2-edgex
   failurePolicy: Fail
   name: vedgex.kb.io
   rules:
   - apiGroups:
     - device.openyurt.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE

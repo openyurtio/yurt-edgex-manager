@@ -48,6 +48,7 @@ var (
 	setupLog     = ctrl.Log.WithName("setup")
 	securityFile = "EdgeXConfig/config.json"
 	nosectyFile  = "EdgeXConfig/config-nosecty.json"
+	manifestPath = "EdgeXConfig/manifest.yaml"
 	//go:embed EdgeXConfig
 	edgeXconfig embed.FS
 )
@@ -148,7 +149,12 @@ func main() {
 	}
 
 	if enableWebhook {
-		if err = (&edgexwebhook.EdgeXHandler{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+		manifestContent, err := edgeXconfig.ReadFile(manifestPath)
+		if err != nil {
+			setupLog.Error(err, "File to open the embed EdgeX manifest config")
+			os.Exit(1)
+		}
+		if err = (&edgexwebhook.EdgeXHandler{Client: mgr.GetClient(), ManifestContent: manifestContent}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EdgeX")
 			os.Exit(1)
 		}
