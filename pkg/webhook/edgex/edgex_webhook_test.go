@@ -29,7 +29,6 @@ var defaultEdgeX = &v1alpha2.EdgeX{
 func TestEdgeXDefaulter(t *testing.T) {
 	webhook := &EdgeXHandler{}
 	manifestPath := "../../../EdgeXConfig/manifest.yaml"
-	// manifestPath = "manifest.yaml"
 	manifestContent, err := ioutil.ReadFile(manifestPath)
 
 	if err != nil {
@@ -69,7 +68,6 @@ func TestEdgeXValidator(t *testing.T) {
 	webhook := &EdgeXHandler{Client: client}
 
 	// set default value
-	// webhook.initManifest()
 	manifestPath := "../../../EdgeXConfig/manifest.yaml"
 	manifestContent, err := ioutil.ReadFile(manifestPath)
 	if err != nil {

@@ -75,23 +75,7 @@ func (webhook *EdgeXHandler) initManifest(manifestContent []byte) error {
 	return nil
 }
 
-// func (*EdgeXHandler) readManifest(mfp string) ([]byte, error) {
-// 	manifestContent, err := edgeXconfig.ReadFile(mfp)
-
-// 	if err != nil {
-// 		return nil, fmt.Errorf("edc File to open the embed EdgeX manifest config %w %s", err, mfp)
-// 	}
-// 	return manifestContent, nil
-// }
-
-var (
-	// manifestPath = "manifest.yaml"
-	// manifestPath = "pkg/webhook/edgex/manifest.yaml"
-	manifest = NewManifest()
-
-	// //go:embed manifest.yaml
-	// edgeXconfig embed.FS
-)
+var manifest = NewManifest()
 
 //+kubebuilder:rbac:groups=apps.openyurt.io,resources=nodepools,verbs=list;watch
 
@@ -169,7 +153,7 @@ func (webhook *EdgeXHandler) validate(ctx context.Context, edgex *v1alpha2.EdgeX
 	if specErrs := webhook.validateEdgeXSpec(edgex); specErrs != nil {
 		return specErrs
 	}
-	// verify that the poolname is a right nodepool name
+	// verify that the poolname nodepool
 	if nodePoolErrs := webhook.validateEdgeXWithNodePools(ctx, edgex); nodePoolErrs != nil {
 		return nodePoolErrs
 	}
