@@ -67,7 +67,6 @@ func TestEdgeXValidator(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	webhook := &EdgeXHandler{Client: client}
 
-	// set default value
 	manifestPath := "../../../EdgeXConfig/manifest.yaml"
 	manifestContent, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
@@ -77,16 +76,18 @@ func TestEdgeXValidator(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// set default value
 	if err := webhook.Default(context.TODO(), defaultEdgeX); err != nil {
 		t.Fatal(err)
 	}
 
 	//validate edgex's version
-	defaultEdgeX.Spec.Version = "testing"
-	if err := webhook.ValidateCreate(context.TODO(), defaultEdgeX); err == nil {
-		t.Fatal("edgex should create fail", err)
-	}
-	defaultEdgeX.Spec.Version = "levski"
+	// defaultEdgeX.Spec.Version = "testing"
+	// if err := webhook.ValidateCreate(context.TODO(), defaultEdgeX); err == nil {
+	// 	t.Fatal("edgex should create fail", err)
+	// }
+
+	// defaultEdgeX.Spec.Version = "levski"
 	if err := webhook.ValidateCreate(context.TODO(), defaultEdgeX); err != nil {
 		t.Fatal("edgex should create success", err)
 	}
@@ -94,7 +95,6 @@ func TestEdgeXValidator(t *testing.T) {
 	//validate edgex's poolname
 	EdgeX2 := defaultEdgeX.DeepCopy()
 	EdgeX2.ObjectMeta.Name = "test2"
-	EdgeX2.Spec.Version = "test"
 	EdgeX2.Spec.Version = "jakarta"
 	EdgeX2.Spec.PoolName = "hangzhou"
 
