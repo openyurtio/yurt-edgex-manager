@@ -17,8 +17,20 @@ limitations under the License.
 package edgex
 
 import (
-	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	"context"
+	"testing"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1 "github.com/openyurtio/api/apps/v1alpha1"
+
+	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 var defaultEdgeX = &v1alpha1.EdgeX{
@@ -31,7 +43,6 @@ var defaultEdgeX = &v1alpha1.EdgeX{
 	},
 }
 
-/**
 func TestEdgeXDefaulter(t *testing.T) {
 	webhook := &EdgeXHandler{}
 	if err := webhook.Default(context.TODO(), defaultEdgeX); err != nil {
@@ -110,5 +121,3 @@ func TestEdgeXValidator(t *testing.T) {
 	}
 
 }
-
-**/

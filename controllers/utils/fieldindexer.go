@@ -18,7 +18,6 @@ package util
 
 import (
 	"context"
-	"sync"
 
 	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha1"
 	"github.com/openyurtio/yurt-edgex-manager/api/v1alpha2"
@@ -30,7 +29,7 @@ const (
 	IndexerPathForNodepoolv2 = "spec.poolname"
 )
 
-var registerOnce sync.Once
+// var registerOnce sync.Once
 
 func RegisterFieldIndexers(fi client.FieldIndexer) error {
 	register := func(obj client.Object, path string) error {
