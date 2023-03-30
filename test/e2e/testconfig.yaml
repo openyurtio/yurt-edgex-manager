@@ -35,4 +35,4 @@ variables:
 intervals:
   default/wait-dependency: ["5m", "10s"]
   default/create-nodepool: ["30s", "5s"]
-  default/create-edgex: ["9m", "10s"]
+  default/create-edgex: ["5m", "10s"]
