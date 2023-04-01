@@ -194,7 +194,7 @@ func (webhook *EdgeXHandler) validateEdgeXWithNodePools(ctx context.Context, edg
 	}
 	// verify that no other edgex in the nodepool
 	var edgexes v1alpha2.EdgeXList
-	listOptions := client.MatchingFields{util.IndexerPathForNodepoolv2: edgex.Spec.PoolName}
+	listOptions := client.MatchingFields{util.IndexerPathForNodepool: edgex.Spec.PoolName}
 	if err := webhook.Client.List(ctx, &edgexes, listOptions); err != nil {
 		return field.ErrorList{
 			field.Invalid(field.NewPath("spec", "poolName"), edgex.Spec.PoolName, "can not list edgexes, cause"+err.Error()),

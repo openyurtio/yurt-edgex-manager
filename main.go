@@ -23,8 +23,8 @@ import (
 	"os"
 
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
-	edgexwebhook "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex"
-	edgexwebhookV1 "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex/v1alpha1"
+	edgexwebhookv1alpha2 "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex"
+	edgexwebhookv1alpha1 "github.com/openyurtio/yurt-edgex-manager/pkg/webhook/edgex/v1alpha1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -155,13 +155,13 @@ func main() {
 			setupLog.Error(err, "File to open the embed EdgeX manifest config")
 			os.Exit(1)
 		}
-		if err = (&edgexwebhook.EdgeXHandler{Client: mgr.GetClient(), ManifestContent: manifestContent}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&edgexwebhookv1alpha2.EdgeXHandler{Client: mgr.GetClient(), ManifestContent: manifestContent}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook v1alpha2", "webhook", "EdgeX")
 			os.Exit(1)
 		}
 
-		if err = (&edgexwebhookV1.EdgeXHandler{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook v1alpha2", "webhook", "EdgeX")
+		if err = (&edgexwebhookv1alpha1.EdgeXHandler{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook v1alpha1", "webhook", "EdgeX")
 			os.Exit(1)
 		}
 
