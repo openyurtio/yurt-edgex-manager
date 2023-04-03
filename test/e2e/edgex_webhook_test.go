@@ -47,6 +47,64 @@ var _ = Describe("test webhook", func() {
 		cleanupEdgex(ctx, k8sClient, edgexes)
 	})
 
+	It("Create a edgex without setting version and servicetype", func() {
+		edgexForDefault := &devicev1alpha1.EdgeX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "edgex-webhook-beijing",
+				Namespace: "default",
+			},
+			Spec: devicev1alpha1.EdgeXSpec{
+				PoolName: "beijing",
+			},
+		}
+		k8sClient.Create(ctx, edgexForDefault)
+		resForDefault := &devicev1alpha1.EdgeX{}
+		Eventually(func() bool {
+			key := client.ObjectKey{
+				Namespace: "default",
+				Name:      "edgex-webhook-beijing",
+			}
+			if err := k8sClient.Get(ctx, key, resForDefault); err != nil {
+				return false
+			}
+			if resForDefault.Status.Ready == true {
+				edgexes.Items = append(edgexes.Items, *edgexForDefault)
+				By("edgex create in beijing")
+				return true
+			}
+			return false
+
+		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeTrue(), func() string { return "EdgeX beijing without setting version and servicetype not ready" })
+
+		By("Create a edgex with an already occupied nodepool")
+		edgexForOccupiedNodePool := &devicev1alpha1.EdgeX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "edgex-webhook-occupied-beijing",
+				Namespace: "default",
+			},
+			Spec: devicev1alpha1.EdgeXSpec{
+				PoolName: "beijing",
+			},
+		}
+		k8sClient.Create(ctx, edgexForDefault)
+		resForOccupiedNodePool := &devicev1alpha1.EdgeX{}
+
+		Eventually(func() bool {
+			key := client.ObjectKey{
+				Namespace: "default",
+				Name:      "edgex-webhook-occupied-beijing",
+			}
+			if err := k8sClient.Get(ctx, key, resForOccupiedNodePool); err != nil {
+				return false
+			}
+			if resForOccupiedNodePool.Status.Ready == true {
+				edgexes.Items = append(edgexes.Items, *edgexForOccupiedNodePool)
+				return true
+			}
+			return false
+		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeFalse(), func() string { return "EdgeX beijing with an already occupied nodepool ready" })
+	})
+
 	It("Create a edgex in beijing with wrong servicetype", func() {
 		edgexForWrongServiceType := &devicev1alpha1.EdgeX{
 			ObjectMeta: metav1.ObjectMeta{
@@ -106,62 +164,6 @@ var _ = Describe("test webhook", func() {
 		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeFalse(), func() string { return "EdgeX shanghai with wrong poolname ready" })
 	})
 
-	It("Create a edgex without setting version and servicetype", func() {
-		edgexForDefault := &devicev1alpha1.EdgeX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "edgex-webhook-beijing",
-				Namespace: "default",
-			},
-			Spec: devicev1alpha1.EdgeXSpec{
-				PoolName: "beijing",
-			},
-		}
-		k8sClient.Create(ctx, edgexForDefault)
-		resForDefault := &devicev1alpha1.EdgeX{}
-		Eventually(func() bool {
-			key := client.ObjectKey{
-				Namespace: "default",
-				Name:      "edgex-webhook-beijing",
-			}
-			if err := k8sClient.Get(ctx, key, resForDefault); err != nil {
-				return false
-			}
-			if resForDefault.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgexForDefault)
-				return true
-			}
-			return false
-
-		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeTrue(), func() string { return "EdgeX beijing without setting version and servicetype not ready" })
-
-		By("Create a edgex with an already occupied nodepool")
-		edgexForOccupiedNodePool := &devicev1alpha1.EdgeX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "edgex-webhook-occupied-beijing",
-				Namespace: "default",
-			},
-			Spec: devicev1alpha1.EdgeXSpec{
-				PoolName: "beijing",
-			},
-		}
-		k8sClient.Create(ctx, edgexForDefault)
-		resForOccupiedNodePool := &devicev1alpha1.EdgeX{}
-
-		Eventually(func() bool {
-			key := client.ObjectKey{
-				Namespace: "default",
-				Name:      "edgex-webhook-occupied-beijing",
-			}
-			if err := k8sClient.Get(ctx, key, resForOccupiedNodePool); err != nil {
-				return false
-			}
-			if resForOccupiedNodePool.Status.Ready == true {
-				edgexes.Items = append(edgexes.Items, *edgexForOccupiedNodePool)
-				return true
-			}
-			return false
-		}, e2eConfig.GetIntervals("default", "create-edgex")...).Should(BeFalse(), func() string { return "EdgeX beijing with an already occupied nodepool ready" })
-	})
 })
 
 func cleanupEdgex(ctx context.Context, k8sClient client.Client, edgexes *devicev1alpha1.EdgeXList) error {
