@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/device.openyurt.io_edgexes.yaml
+- bases/device.openyurt.io_devices.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

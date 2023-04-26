@@ -19,6 +19,7 @@ package e2e
 import (
 	"context"
 	"flag"
+	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
 	"os"
 	"testing"
 
@@ -169,7 +170,7 @@ func installDependency(config *framework.E2EConfig, testbed framework.ClusterPro
 	Eventually(func() bool {
 		key := client.ObjectKey{
 			Namespace: "default",
-			Name:      "edgex-controller-manager",
+			Name:      util.IotCtrlName,
 		}
 		if err := testbed.GetClient().Get(ctx, key, deployment); err != nil {
 			return false

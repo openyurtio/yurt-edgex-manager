@@ -4,16 +4,16 @@ metadata:
   name: controller-manager
   namespace: system
   labels:
-    control-plane: controller-manager
+    control-plane: edgex-controller-manager
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: edgex-controller-manager
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        control-plane: edgex-controller-manager
     spec:
       nodeSelector:
         openyurt.io/is-edge-worker: "false"
@@ -32,7 +32,7 @@ spec:
         args:
         - --leader-elect
         image: controller:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
