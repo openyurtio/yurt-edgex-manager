@@ -20,12 +20,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"time"
+
 	util "github.com/openyurtio/yurt-edgex-manager/controllers/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"reflect"
-	"time"
 
 	unitv1alpha1 "github.com/openyurtio/api/apps/v1alpha1"
 	"github.com/pkg/errors"

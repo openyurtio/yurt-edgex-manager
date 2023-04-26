@@ -96,10 +96,7 @@ var _ = Describe("EdgeX controller", func() {
 
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, edgexLookupKey, createdEdgex)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			time.Sleep(10 * time.Second)
 			Expect(createdEdgex.Spec.Version).Should(Equal(EdgexVersion))

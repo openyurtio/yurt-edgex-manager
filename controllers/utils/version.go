@@ -3,13 +3,14 @@ package util
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const IotCtrlName = "edgex-controller-manager"
@@ -44,6 +45,6 @@ func DefaultVersion(ctx context.Context, cli client.Client) (string, string, err
 
 	version := iotCtrlImage[strings.LastIndex(iotCtrlImage, ":")+1:]
 	ns := list.Items[0].Namespace
-	klog.Infof("default version: %s, default namespace", version, ns)
+	klog.Infof("default version: %s, default namespace", version)
 	return version, ns, nil
 }
