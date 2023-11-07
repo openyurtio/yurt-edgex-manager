@@ -1,5 +1,13 @@
 # Yurt-edgex-manager
 
+**IMPORTANT: yurt-edgex-manager has been merged into the openyurt repo, so project is no longer being actively maintained and has been archived.**
+
+## Archived Project
+
+This project has been archived and is no longer being actively maintained. This means you can view and copy the code, but cannot make changes or propose pull requests.
+
+While you're here, feel free to review the code and learn from it. If you wish to use the code or revive the project, you can fork it to your own GitHub account.
+
 <div align="center">
 
 <img src="https://github.com/openyurtio/openyurt/blob/master/docs/img/OpenYurt.png" width="400" height="94"><br/>
